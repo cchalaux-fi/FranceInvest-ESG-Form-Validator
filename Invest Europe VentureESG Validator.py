@@ -36,11 +36,11 @@ def is_float(value: str):
 def get_typed_value(schema: dict, value: str, compound_id: str):
     if schema.get(compound_id, {}).get("type") == "integer" and value.isnumeric():
         value = int(value)
+    elif schema.get(compound_id, {}).get("type") == "float" and is_float(value):
+        value = float(value)
     else:
-        if is_float(value):
-            value = float(value)
+        value = str(value)
     return value
-
 
 def read_and_organize_csv(csv_path: str, company_id: str):
     """
@@ -100,6 +100,8 @@ def validate_metrics_by_company(company_data: dict, schema: dict):
     valid_lines = []
     error_lines = []
     unknown_lines = []
+    blank_lines = []
+    recommended_but_missing_lines = []
     missing_metrics = []
 
     # Collect metrics for each level
@@ -112,13 +114,15 @@ def validate_metrics_by_company(company_data: dict, schema: dict):
     
     for compound_id in ALL_METRICS:
         # Determine if metric is missing or invalid
+        
         if compound_id not in company_metrics:
             level = (
-                "minimum" if compound_id in MINIMUM_METRICS
-                else "recommended" if compound_id in RECOMMENDED_METRICS
-                else "full" if compound_id in FULL_METRICS
-                else "not required"
-            )
+                    "Minimum" if compound_id in MINIMUM_METRICS
+                    else "Recommended" if compound_id in RECOMMENDED_METRICS
+                    else "Full" if compound_id in FULL_METRICS
+                    else "Value not required"
+                )
+            
             missing_metrics.append({
                 "compound_id": compound_id,
                 "requirement_level": level,
@@ -136,16 +140,60 @@ def validate_metrics_by_company(company_data: dict, schema: dict):
                     else "Marked as not available in import file"
                 )
                 level = (
-                    "minimum" if compound_id in MINIMUM_METRICS
-                    else "recommended" if compound_id in RECOMMENDED_METRICS
-                    else "full" if compound_id in FULL_METRICS
-                    else "not required"
+                    "Minimum" if compound_id in MINIMUM_METRICS
+                    else "Recommended" if compound_id in RECOMMENDED_METRICS
+                    else "Full" if compound_id in FULL_METRICS
+                    else "Value not required"
                 )
-                missing_metrics.append({
-                    "compound_id": compound_id,
-                    "requirement_level": level,
-                    "reason": reason,
-                })
+                
+                if raw_fte_value := company_metrics["total_ftes_end_of_report_year"]:
+                    total_fte_number = get_typed_value(schema=SCHEMA_PORTCO, value=raw_fte_value, compound_id="total_ftes_end_of_report_year")
+
+                    if level == "Minimum":
+                        recommended_but_missing_lines.append({
+                            "compound_id": compound_id,
+                            "requirement_level": level,
+                            "reason": "Status is 'not_applicable' or 'not_available', but this is a 'minimum' metric.",
+                        })
+                    elif level == "Recommended":
+                        if total_fte_number >= 15:
+                            recommended_but_missing_lines.append({
+                                "compound_id": compound_id,
+                                "requirement_level": level,
+                                "reason": "Status is 'not_applicable' or 'not_available', but this is a 'recommended' metric for companies with FTE higher than 15.",
+                            })
+                        else:
+                            blank_lines.append({
+                                "compound_id": compound_id,
+                                "requirement_level": level,
+                                "reason": reason,
+                            })
+                    elif level == "Full":
+                        if total_fte_number >= 250:
+                            recommended_but_missing_lines.append({
+                                "compound_id": compound_id,
+                                "requirement_level": level,
+                                "reason": "Status is 'not_applicable' or 'not_available', but all metrics are strongly recommended for companies with FTE higher than 250.",
+                            })
+                        else:
+                            blank_lines.append({
+                                "compound_id": compound_id,
+                                "requirement_level": level,
+                                "reason": reason,
+                            })
+                else:
+                    if level == "Minimum":
+                        recommended_but_missing_lines.append({
+                            "compound_id": compound_id,
+                            "requirement_level": level,
+                            "reason": "Status is 'not_applicable' or 'not_available', but this is a 'minimum' metric.",
+                        })
+                    else:
+                        recommended_but_missing_lines.append({
+                            "compound_id": compound_id,
+                            "requirement_level": level,
+                            "reason": "Status is 'not_applicable' or 'not_available'. Unknown level of requirement for this company since total_ftes_end_of_report_year is not provided.",
+                        })
                 continue  # Skip schema validation for these metrics
 
             # Handle blank values
@@ -162,18 +210,26 @@ def validate_metrics_by_company(company_data: dict, schema: dict):
 
                 validator = Validator({compound_id: schema.get(compound_id, {})})
                 validation_data = {compound_id: typed_value}
+                level = (
+                    "Minimum" if compound_id in MINIMUM_METRICS
+                    else "Recommended" if compound_id in RECOMMENDED_METRICS
+                    else "Full" if compound_id in FULL_METRICS
+                    else "Value not required"
+                )
 
                 if validator.validate(validation_data):
                     valid_lines.append({
                         "compound_id": compound_id,
                         "raw_value": typed_value,
                         "interpreted_value": interpreted_value,
+                        "requirement_level": level,
                     })
                 else:
                     error_lines.append({
                         "compound_id": compound_id,
                         "raw_value": raw_value,
                         "error_notes": str(validator.errors),
+                        "requirement_level": level,
                     })
                     
             else: 
@@ -181,6 +237,7 @@ def validate_metrics_by_company(company_data: dict, schema: dict):
                     "compound_id": compound_id,
                     "raw_value": raw_value,
                     "error_notes": f"Unknown value in 'STATUS' column: {status}.",
+                    "requirement_level": level,
                 })
                    
      # Special relationships validation - dependencies and conditionals
@@ -297,9 +354,9 @@ def validate_metrics_by_company(company_data: dict, schema: dict):
         }
     ]
 
-    minimum = MINIMUM_METRICS
-    recommended = RECOMMENDED_METRICS
-    full = FULL_METRICS
+    minimum = MINIMUM_METRICS[:]
+    recommended = RECOMMENDED_METRICS[:]
+    full = FULL_METRICS[:]
     
     for relation in special_relations:
         
@@ -310,14 +367,39 @@ def validate_metrics_by_company(company_data: dict, schema: dict):
                 total_field = relation["total_field"]
                 # Ensure the total field is not marked as not_applicable or not_available
                 total_status = company_statuses.get(total_field, "")
-                if total_field not in company_metrics or company_metrics[total_field] == "" or total_status in ["not_applicable", "not_available"]:
-                    error_lines.append({
-                        "compound_id": total_field,
-                        "error_notes": f"Required because at least one value is provided for {', '.join(relation['condition_ids'])}, but '{total_field}' is missing or invalid."
-                    })
-                    # Ensure we remove the dependent field from valid_lines
-                    valid_lines = [line for line in valid_lines if line["compound_id"] != total_field]
+                
+                if total_field not in company_metrics:
+                    #Replace line in missing metrics with more detail
                     missing_metrics = [line for line in missing_metrics if line["compound_id"] != total_field]
+                    missing_metrics.append({
+                        "compound_id": total_field,
+                        "requirement_level": f"Strongly recommended because at least one value is provided for {', '.join(relation['condition_ids'])}",
+                        "reason": "Not in import file at all",
+                    })
+                    blank_lines = [line for line in blank_lines if line["compound_id"] != total_field]
+                    
+                elif company_metrics[total_field] == "":
+                    #Replace line in missing metrics with more detail
+                    missing_metrics = [line for line in missing_metrics if line["compound_id"] != total_field]
+                    missing_metrics.append({
+                        "compound_id": total_field,
+                        "requirement_level": f"Strongly recommended because at least one value is provided for {', '.join(relation['condition_ids'])}",
+                        "reason": "Value is blank",
+                    })
+                    valid_lines = [line for line in valid_lines if line["compound_id"] != total_field]
+                    blank_lines = [line for line in blank_lines if line["compound_id"] != total_field]
+
+                elif total_status in ["not_applicable", "not_available"]:
+                    #Replace line in recommended_but_missing_lines metrics with more detail
+                    recommended_but_missing_lines = [line for line in recommended_but_missing_lines if line["compound_id"] != total_field]
+                    recommended_but_missing_lines.append({
+                        "compound_id": total_field,
+                        "requirement_level": f"Strongly recommended because at least one value is provided for {', '.join(relation['condition_ids'])}",
+                        "reason": "Marked as not_applicable or not_available"
+                    })
+                    blank_lines = [line for line in blank_lines if line["compound_id"] != total_field]
+                    
+                
                     
         # Checks dependencies, e.g., percentage_turnover_tobacco_activities is required if tobacco_activities = 'yes'
         else:  
@@ -327,21 +409,51 @@ def validate_metrics_by_company(company_data: dict, schema: dict):
 
             if company_metrics.get(condition_id) == condition_value:
                 for dependent_id in dependent_ids:
-                    if dependent_id not in company_metrics or company_metrics[dependent_id] == "" or company_statuses.get(dependent_id, "") in ["not_applicable", "not_available"]:
-                        error_lines.append({
-                            "compound_id": dependent_id,
-                            "error_notes": f"Required because '{condition_id}' is '{condition_value}' but not provided or invalid."
-                        })
-                        # Ensure we remove the dependent field from valid_lines
-                        valid_lines = [line for line in valid_lines if line["compound_id"] != dependent_id]
+                    if dependent_id not in company_metrics:
+                        #Replace line in missing metrics with more detail
                         missing_metrics = [line for line in missing_metrics if line["compound_id"] != dependent_id]
+                        missing_metrics.append({
+                            "compound_id": dependent_id,
+                            "requirement_level": f"Strongly recommended because '{condition_id}' is '{condition_value}'",
+                            "reason": "Not in import file at all",
+                        })
+                        blank_lines = [line for line in blank_lines if line["compound_id"] != dependent_id]
                         
-                        if condition_id in minimum:
-                            minimum.append(dependent_id)
-                        if condition_id in recommended:
-                            recommended.append(dependent_id)
-                        if condition_id in full:
-                            full.append(dependent_id)
+                    elif company_metrics[dependent_id] == "":
+                        #Replace line in missing metrics with more detail
+                        missing_metrics = [line for line in missing_metrics if line["compound_id"] != dependent_id]
+                        missing_metrics.append({
+                            "compound_id": dependent_id,
+                            "requirement_level": f"Strongly recommended because '{condition_id}' is '{condition_value}'",
+                            "reason": "Value is blank",
+                        })
+                        valid_lines = [line for line in valid_lines if line["compound_id"] != dependent_id]
+                        blank_lines = [line for line in blank_lines if line["compound_id"] != dependent_id]
+                        
+                    elif company_statuses.get(dependent_id, "") in ["not_applicable", "not_available"]:
+                        #Replace line in recommended_but_missing_lines metrics with more detail
+                        recommended_but_missing_lines = [line for line in recommended_but_missing_lines if line["compound_id"] != dependent_id]
+                        recommended_but_missing_lines.append({
+                            "compound_id": dependent_id,
+                            "requirement_level": f"Strongly recommended because '{condition_id}' is '{condition_value}'",
+                            "reason": "Marked as not_applicable or not_available",
+                        })
+                        blank_lines = [line for line in blank_lines if line["compound_id"] != dependent_id]
+                        
+                    else:
+                        #Replace line in valid_lines metrics with correct requirement
+                        
+                        obj = next((x for x in valid_lines if x["compound_id"] == dependent_id), None)
+                        if obj:
+                            obj["requirement_level"] = f"Strongly recommended because '{condition_id}' is '{condition_value}'",
+                    
+                        
+                    if condition_id in minimum:
+                        minimum.append(dependent_id)
+                    if condition_id in recommended:
+                        recommended.append(dependent_id)
+                    if condition_id in full:
+                        full.append(dependent_id)
 
 
     # Handle unknown compound IDs
@@ -351,6 +463,7 @@ def validate_metrics_by_company(company_data: dict, schema: dict):
                 "compound_id": compound_id,
                 "raw_value": company_metrics[compound_id],
                 "error_notes": "Unknown compound ID",
+                
             })
 
     # Calculate valid metric percentages by level
@@ -378,10 +491,11 @@ def validate_metrics_by_company(company_data: dict, schema: dict):
     }
 
     # Return the company summary
+    #TO DO: Update these counts, and update the return for the new groups of lines
     return {
         "company_name": company_metrics.get("company_name", "Unknown Company"),
         "valid_lines": len(valid_lines),
-        "invalid_lines": len(error_lines),
+        "invalid_lines": len(error_lines)+ len(missing_metrics),
         "percent_min": percentages["minimum"],
         "percent_rec": percentages["recommended"],
         "percent_full": percentages["full"],
@@ -392,6 +506,8 @@ def validate_metrics_by_company(company_data: dict, schema: dict):
         "error_lines": error_lines,
         "unknown_lines": unknown_lines,
         "missing_metrics": missing_metrics,
+        "blank_lines": blank_lines,
+        "recommended_but_missing_lines": recommended_but_missing_lines,
     }
 
 def get_interpreted_value_portco(value: str, compound_id: str):
@@ -742,13 +858,15 @@ def validate_metrics_by_fund(fund_data: dict, schema: dict):
     valid_lines = []
     error_lines = []
     unknown_lines = []
+    blank_lines = []
+    recommended_but_missing_lines = []
     missing_metrics = []
     
     for compound_id in ALL_FUND_METRICS:
         if compound_id not in fund_metrics:
             level = (
-                "required" if compound_id in REQUIRED_FUND_METRICS
-                else "not required"
+                "Strongly recommended" if compound_id in REQUIRED_FUND_METRICS
+                else "Value not required"
             )
             missing_metrics.append({
                 "compound_id": compound_id,
@@ -768,14 +886,22 @@ def validate_metrics_by_fund(fund_data: dict, schema: dict):
                     else "Marked as not available in import file"
                 )
                 level = (
-                    "required" if compound_id in REQUIRED_FUND_METRICS
-                    else "not required"
+                    "Strongly recommended" if compound_id in REQUIRED_FUND_METRICS
+                    else "Value not required"
                 )
-                missing_metrics.append({
-                    "compound_id": compound_id,
-                    "requirement_level": level,
-                    "reason": reason,
-                })
+                
+                if level == "Strongly recommended":
+                    recommended_but_missing_lines.append({
+                        "compound_id": compound_id,
+                        "requirement_level": level,
+                        "reason": "Status is 'not_applicable' or 'not_available', but this is a strongly recommended metric.",
+                    })
+                else: 
+                    blank_lines.append({
+                        "compound_id": compound_id,
+                        "requirement_level": level,
+                        "reason": reason,
+                    })
                 continue  # Skip schema validation for these metrics
 
             # Handle blank values
@@ -931,8 +1057,9 @@ def validate_metrics_by_fund(fund_data: dict, schema: dict):
         },
     ]
     
-     
-    required = REQUIRED_FUND_METRICS
+    
+    required = REQUIRED_FUND_METRICS[:]
+
     for relation in special_relations:
         
         # Checks to make sure the total is always there for a metric that is a subset of that total (e.g., female FTE requires total FTE)
@@ -942,14 +1069,37 @@ def validate_metrics_by_fund(fund_data: dict, schema: dict):
                 total_field = relation["total_field"]
                 # Ensure the total field is not marked as not_applicable or not_available
                 total_status = fund_statuses.get(total_field, "")
-                if total_field not in fund_metrics or fund_metrics[total_field] == "" or total_status in ["not_applicable", "not_available"]:
-                    error_lines.append({
-                        "compound_id": total_field,
-                        "error_notes": f"Required because at least one value is provided for {', '.join(relation['condition_ids'])}, but '{total_field}' is missing or invalid."
-                    })
-                    # Ensure we remove the dependent field from valid_lines and missing metrics as its now in error
-                    valid_lines = [line for line in valid_lines if line["compound_id"] != total_field]
+                
+                if total_field not in fund_metrics:
+                    #Replace line in missing metrics with more detail
                     missing_metrics = [line for line in missing_metrics if line["compound_id"] != total_field]
+                    missing_metrics.append({
+                        "compound_id": total_field,
+                        "requirement_level": f"Strongly recommended because at least one value is provided for {', '.join(relation['condition_ids'])}",
+                        "reason": "Not in import file at all",
+                    })
+                    blank_lines = [line for line in blank_lines if line["compound_id"] != total_field]
+                    
+                elif fund_metrics[total_field] == "":
+                    #Replace line in missing metrics with more detail
+                    missing_metrics = [line for line in missing_metrics if line["compound_id"] != total_field]
+                    missing_metrics.append({
+                        "compound_id": total_field,
+                        "requirement_level": f"Strongly recommended because at least one value is provided for {', '.join(relation['condition_ids'])}",
+                        "reason": "Value is blank",
+                    })
+                    valid_lines = [line for line in valid_lines if line["compound_id"] != total_field]
+                    blank_lines = [line for line in blank_lines if line["compound_id"] != total_field]
+
+                elif total_status in ["not_applicable", "not_available"]:
+                    #Replace line in recommended_but_missing_lines metrics with more detail
+                    recommended_but_missing_lines = [line for line in recommended_but_missing_lines if line["compound_id"] != total_field]
+                    recommended_but_missing_lines.append({
+                        "compound_id": total_field,
+                        "requirement_level": f"Strongly recommended because at least one value is provided for {', '.join(relation['condition_ids'])}",
+                        "reason": "Marked as not_applicable or not_available"
+                    })
+                    blank_lines = [line for line in blank_lines if line["compound_id"] != total_field]
                     
         else:   # Checks dependencies, e.g., percentage_turnover_tobacco_activities is required if tobacco_activities = 'yes'
 
@@ -959,14 +1109,37 @@ def validate_metrics_by_fund(fund_data: dict, schema: dict):
 
             if fund_metrics.get(condition_id) == condition_value:
                 for dependent_id in dependent_ids:
-                    if dependent_id not in fund_metrics or fund_metrics[dependent_id] == "" or fund_statuses.get(dependent_id, "") in ["not_applicable", "not_available"]:
-                        error_lines.append({
-                            "compound_id": dependent_id,
-                            "error_notes": f"Required because '{condition_id}' is '{condition_value}' but not provided or invalid."
-                        })
-                        # Ensure we remove the dependent field from valid_lines and missing metrics as its now in error
-                        valid_lines = [line for line in valid_lines if line["compound_id"] != dependent_id]
+                    if dependent_id not in fund_metrics:
+                        #Replace line in missing metrics with more detail
                         missing_metrics = [line for line in missing_metrics if line["compound_id"] != dependent_id]
+                        missing_metrics.append({
+                            "compound_id": dependent_id,
+                            "requirement_level": f"Strongly recommended because '{condition_id}' is '{condition_value}'",
+                            "reason": "Not in import file at all",
+                        })
+                        blank_lines = [line for line in blank_lines if line["compound_id"] != dependent_id]
+                        
+                    elif fund_metrics[dependent_id] == "":
+                        #Replace line in missing metrics with more detail
+                        missing_metrics = [line for line in missing_metrics if line["compound_id"] != dependent_id]
+                        missing_metrics.append({
+                            "compound_id": dependent_id,
+                            "requirement_level": f"Strongly recommended because '{condition_id}' is '{condition_value}'",
+                            "reason": "Value is blank",
+                        })
+                        valid_lines = [line for line in valid_lines if line["compound_id"] != dependent_id]
+                        blank_lines = [line for line in blank_lines if line["compound_id"] != dependent_id]
+                        
+                    elif fund_statuses.get(dependent_id, "") in ["not_applicable", "not_available"]:
+                        #Replace line in recommended_but_missing_lines metrics with more detail
+                        recommended_but_missing_lines = [line for line in recommended_but_missing_lines if line["compound_id"] != dependent_id]
+                        recommended_but_missing_lines.append({
+                            "compound_id": dependent_id,
+                            "requirement_level": f"Strongly recommended because '{condition_id}' is '{condition_value}'",
+                            "reason": "Marked as not_applicable or not_available",
+                        })
+                        blank_lines = [line for line in blank_lines if line["compound_id"] != dependent_id]
+
                         
                     required.append(dependent_id)
                         
@@ -979,18 +1152,22 @@ def validate_metrics_by_fund(fund_data: dict, schema: dict):
                 "error_notes": "Unknown compound ID",
             })
             
-    percentage_completion = round((len(valid_lines) / len(required)) * 100, 2)
+    provided_required_lines = [line for line in valid_lines if line["compound_id"] in required]
+    
+    percentage_completion = round((len(provided_required_lines) / len(required)) * 100, 2)
 
     # Return the fund summary
     return {
         "company_name": fund_metrics.get("fund_name", "Unknown Fund"),
         "valid_lines": len(valid_lines),
-        "invalid_lines": len(error_lines),
+        "invalid_lines": len(error_lines) + len(missing_metrics),
         "percent_completion": percentage_completion,
         "correct_lines": valid_lines,
         "error_lines": error_lines,
         "unknown_lines": unknown_lines,
         "missing_metrics": missing_metrics,
+        "blank_lines": blank_lines,
+        "recommended_but_missing_lines": recommended_but_missing_lines,
     }                      
 
 def get_interpreted_value_fund(value: str, compound_id: str):
@@ -1094,13 +1271,15 @@ def validate_metrics_by_gp(gp_data: dict, schema: dict):
     valid_lines = []
     error_lines = []
     unknown_lines = []
+    blank_lines = []
+    recommended_but_missing_lines = []
     missing_metrics = []
     
     for compound_id in ALL_GP_METRICS:
         if compound_id not in gp_metrics:
             level = (
-                "required" if compound_id in REQUIRED_GP_METRICS
-                else "not required"
+                "Strongly recommended" if compound_id in REQUIRED_GP_METRICS
+                else "Value not required"
             )
             missing_metrics.append({
                 "compound_id": compound_id,
@@ -1120,14 +1299,22 @@ def validate_metrics_by_gp(gp_data: dict, schema: dict):
                     else "Marked as not available in import file"
                 )
                 level = (
-                    "required" if compound_id in REQUIRED_GP_METRICS
-                    else "not required"
+                    "Strongly recommended" if compound_id in REQUIRED_GP_METRICS
+                    else "Value not required"
                 )
-                missing_metrics.append({
-                    "compound_id": compound_id,
-                    "requirement_level": level,
-                    "reason": reason,
-                })
+                
+                if level == "Strongly recommended":
+                    recommended_but_missing_lines.append({
+                        "compound_id": compound_id,
+                        "requirement_level": level,
+                        "reason": "Status is 'not_applicable' or 'not_available', but this is a strongly recommended metric.",
+                    })
+                else: 
+                    blank_lines.append({
+                        "compound_id": compound_id,
+                        "requirement_level": level,
+                        "reason": reason,
+                    })
                 continue  # Skip schema validation for these metrics
 
             # Handle blank values
@@ -1223,7 +1410,7 @@ def validate_metrics_by_gp(gp_data: dict, schema: dict):
         }
     ]
     
-    required = REQUIRED_GP_METRICS
+    required = REQUIRED_GP_METRICS[:]
     for relation in special_relations:
         # Checks to make sure the total is always there for a metric that is a subset of that total (e.g., female FTE requires total FTE)
         if "condition_ids" in relation:
@@ -1232,15 +1419,39 @@ def validate_metrics_by_gp(gp_data: dict, schema: dict):
                 total_field = relation["total_field"]
                 # Ensure the total field is not marked as not_applicable or not_available
                 total_status = gp_statuses.get(total_field, "")
-                if total_field not in gp_metrics or gp_metrics[total_field] == "" or total_status in ["not_applicable", "not_available"]:
-                    error_lines.append({
-                        "compound_id": total_field,
-                        "error_notes": f"Required because at least one value is provided for {', '.join(relation['condition_ids'])}, but '{total_field}' is missing or invalid."
-                    })
-                    # Ensure we remove the dependent field from valid_lines and missing metrics as its now in error
-                    valid_lines = [line for line in valid_lines if line["compound_id"] != total_field]
+                
+                if total_field not in gp_metrics:
+                    #Replace line in missing metrics with more detail
                     missing_metrics = [line for line in missing_metrics if line["compound_id"] != total_field]
+                    missing_metrics.append({
+                        "compound_id": total_field,
+                        "requirement_level": f"Strongly recommended because at least one value is provided for {', '.join(relation['condition_ids'])}",
+                        "reason": "Not in import file at all",
+                    })
+                    blank_lines = [line for line in blank_lines if line["compound_id"] != total_field]
                     
+                elif gp_metrics[total_field] == "":
+                    #Replace line in missing metrics with more detail
+                    missing_metrics = [line for line in missing_metrics if line["compound_id"] != total_field]
+                    missing_metrics.append({
+                        "compound_id": total_field,
+                        "requirement_level": f"Strongly recommended because at least one value is provided for {', '.join(relation['condition_ids'])}",
+                        "reason": "Value is blank",
+                    })
+                    valid_lines = [line for line in valid_lines if line["compound_id"] != total_field]
+                    blank_lines = [line for line in blank_lines if line["compound_id"] != total_field]
+
+                elif total_status in ["not_applicable", "not_available"]:
+                    #Replace line in recommended_but_missing_lines metrics with more detail
+                    recommended_but_missing_lines = [line for line in recommended_but_missing_lines if line["compound_id"] != total_field]
+                    recommended_but_missing_lines.append({
+                        "compound_id": total_field,
+                        "requirement_level": f"Strongly recommended because at least one value is provided for {', '.join(relation['condition_ids'])}",
+                        "reason": "Marked as not_applicable or not_available"
+                    })
+                    blank_lines = [line for line in blank_lines if line["compound_id"] != total_field]
+                    
+   
         else:  # Checks dependencies, e.g., percentage_turnover_tobacco_activities is required if tobacco_activities = 'yes'
             condition_id = relation["condition_id"]
             condition_value = relation["condition_value"]
@@ -1248,14 +1459,38 @@ def validate_metrics_by_gp(gp_data: dict, schema: dict):
 
             if gp_metrics.get(condition_id) == condition_value:
                 for dependent_id in dependent_ids:
-                    if dependent_id not in gp_metrics or gp_metrics[dependent_id] == "" or gp_statuses.get(dependent_id, "") in ["not_applicable", "not_available"]:
-                        error_lines.append({
-                            "compound_id": dependent_id,
-                            "error_notes": f"Required because '{condition_id}' is '{condition_value}' but not provided or invalid."
-                        })
-                        # Ensure we remove the dependent field from valid_lines and missing metrics as its now in error
-                        valid_lines = [line for line in valid_lines if line["compound_id"] != dependent_id]
+                    if dependent_id not in gp_metrics:
+                        #Replace line in missing metrics with more detail
                         missing_metrics = [line for line in missing_metrics if line["compound_id"] != dependent_id]
+                        missing_metrics.append({
+                            "compound_id": dependent_id,
+                            "requirement_level": f"Strongly recommended because '{condition_id}' is '{condition_value}'",
+                            "reason": "Not in import file at all",
+                        })
+                        blank_lines = [line for line in blank_lines if line["compound_id"] != dependent_id]
+                        
+                    elif gp_metrics[dependent_id] == "":
+                        #Replace line in missing metrics with more detail
+                        missing_metrics = [line for line in missing_metrics if line["compound_id"] != dependent_id]
+                        missing_metrics.append({
+                            "compound_id": dependent_id,
+                            "requirement_level": f"Strongly recommended because '{condition_id}' is '{condition_value}'",
+                            "reason": "Value is blank",
+                        })
+                        valid_lines = [line for line in valid_lines if line["compound_id"] != dependent_id]
+                        blank_lines = [line for line in blank_lines if line["compound_id"] != dependent_id]
+                        
+                    elif gp_statuses.get(dependent_id, "") in ["not_applicable", "not_available"]:
+                        #Replace line in recommended_but_missing_lines metrics with more detail
+                        recommended_but_missing_lines = [line for line in recommended_but_missing_lines if line["compound_id"] != dependent_id]
+                        recommended_but_missing_lines.append({
+                            "compound_id": dependent_id,
+                            "requirement_level": f"Strongly recommended because '{condition_id}' is '{condition_value}'",
+                            "reason": "Marked as not_applicable or not_available",
+                        })
+                        blank_lines = [line for line in blank_lines if line["compound_id"] != dependent_id]
+
+                    
                         
                     required.append(dependent_id)
                         
@@ -1268,7 +1503,10 @@ def validate_metrics_by_gp(gp_data: dict, schema: dict):
                 "error_notes": "Unknown compound ID",
             })
             
-    percentage_completion = round((len(valid_lines) / len(required)) * 100, 2)
+    provided_required_lines = [line for line in valid_lines if line["compound_id"] in required]
+
+            
+    percentage_completion = round((len(provided_required_lines) / len(required)) * 100, 2)
 
     # Return the gp summary
     return {
@@ -1280,6 +1518,8 @@ def validate_metrics_by_gp(gp_data: dict, schema: dict):
         "error_lines": error_lines,
         "unknown_lines": unknown_lines,
         "missing_metrics": missing_metrics,
+        "blank_lines": blank_lines,
+        "recommended_but_missing_lines": recommended_but_missing_lines,
     }
 
 def get_interpreted_value_gp(value: str, compound_id: str):

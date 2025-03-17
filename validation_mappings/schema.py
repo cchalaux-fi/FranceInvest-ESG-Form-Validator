@@ -209,7 +209,7 @@ SCHEMA_PORTCO = {
     #STRING from yes_no
     "dedicated_sustainability_staff": {
         "type": "string",
-        "allowed": ["yes", "no"],
+        "allowed": list(OPTIONS["yes_no_expanded"].keys()),
     },
 
     #0.2.2.1
@@ -571,7 +571,7 @@ SCHEMA_PORTCO = {
 
     #3.2.1
     #Float between 0 and 100
-    "unadjusted_gender_pay_gap": {"type": "float", "min": 0.0, "max": 100.0},
+    "unadjusted_gender_pay_gap": {"type": "float", "min": -100.0, "max": 100.0},
 
     #3.3.1
     #Float (positive) — note: number of FTEs can be non-integer

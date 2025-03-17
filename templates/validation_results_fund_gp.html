@@ -124,6 +124,55 @@
     {% if file_error %}
         <div class="error-message">{{ file_error }}</div>
     {% else %}
+        <button id="exportSummaryBtn">Export Summary CSV</button>
+        <script>
+            document.getElementById("exportSummaryBtn").addEventListener("click", function() {
+
+                // create Fund JSON
+                let fundJson = {{ fund | tojson | safe }};
+                
+                const fund = fundJson
+
+                const data = [];
+                
+                function addRows(status, items, mapping) {
+                    items.forEach(item => {
+                        data.push({
+                            "Status": status,
+                            "Compound ID": item.compound_id,
+                            "Value": item.raw_value || "",
+                            "Error Notes": item.error_notes || "",
+                            "Recommended?": item.requirement_level || "",
+                            "Reason": item.reason || ""
+                        });
+                    });
+                }
+
+                addRows("Valid Lines", fund.correct_lines, ["compound_id", "raw_value"]);
+                addRows("Lines with value errors", fund.error_lines, ["compound_id", "raw_value", "error_notes"]);
+                addRows("Unknown compound_id", fund.unknown_lines, ["compound_id", "raw_value", "error_notes"]);
+                addRows("Strongly recommended, but marked as not_applicable or not_available", fund.recommended_but_missing_lines, ["compound_id", "requirement_level", "reason"]);
+                addRows("Metrics which are missing from the fil", fund.missing_metrics, ["compound_id", "requirement_level", "reason"]);
+                addRows("Other metrics marked 'not_applicable' or 'not_provided'", fund.blank_lines, ["compound_id", "requirement_level", "reason"]);
+                
+                // Convert to CSV format
+                const csvContent = "data:text/csv;charset=utf-8," 
+                    + ["Status,Compound ID,Value,Error Notes,Recommended?,Reason"]
+                    .concat(data.map(row => 
+                        [row.Status, row["Compound ID"], row.Value, row["Error Notes"], row["Recommended?"], row.Reason]
+                        .map(field => `"${field}"`).join(",")
+                    )).join("\n");
+
+                // Create a downloadable link
+                const encodedUri = encodeURI(csvContent);
+                const link = document.createElement("a");
+                link.setAttribute("href", encodedUri);
+                link.setAttribute("download", "InvestEuropeMRF - Validator Export.csv");
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+            });
+        </script>
         <h2>Summary</h2>
         
             <details>
@@ -132,7 +181,7 @@
                     Valid: {{ fund.valid_lines }} | 
                     Errors: {{ fund.invalid_lines }} | 
                     <span class="percentage">
-                        Completion: {{ fund.percent_completion }}%
+                        Percentage of recommended lines valid: {{ fund.percent_completion }}%
                     </span>
                 </summary>
                 <div>
@@ -198,12 +247,34 @@
                         </tbody>
                     </table>
 
-                    <h3>Missing Metrics</h3>
+                    <h3>Strongly recommended metrics marked 'not_applicable' or 'not_available'</h3>
+                    <p>While data is still transferable without these, it may lack essential context.</p>
                     <table>
                         <thead>
                             <tr>
                                 <th>Compound ID</th>
-                                <th>Requirement Level</th>
+                                <th>Recommended?</th>
+                                <th>Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for metric in fund.recommended_but_missing_lines %}
+                                <tr>
+                                    <td>{{ metric.compound_id }}</td>
+                                    <td>{{ metric.requirement_level }}</td>
+                                    <td>{{ metric.reason }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    <h3>Metrics which are missing from the file</h3>
+                    <p>These must be either provided or marked as not_applicable or not_available</p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Compound ID</th>
+                                <th>Recommended?</th>
                                 <th>Reason</th>
                             </tr>
                         </thead>
@@ -217,6 +288,29 @@
                             {% endfor %}
                         </tbody>
                     </table>
+
+                    <h3>Other metrics marked 'not_applicable' or 'not_provided'</h3>
+                    <p>There are no technical errors with these lines, this is just for clarity</p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Compound ID</th>
+                                <th>Recommended?</th>
+                                <th>Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for metric in fund.blank_lines %}
+                                <tr>
+                                    <td>{{ metric.compound_id }}</td>
+                                    <td>{{ metric.requirement_level }}</td>
+                                    <td>{{ metric.reason }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    
                 </div>
             </details>
         

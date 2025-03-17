@@ -158,6 +158,7 @@
                 })
                 .catch(error => console.error("Error:", error));
             });
+            
         </script>
         <h2>Summary</h2>
         {% for company in companies %}
@@ -167,10 +168,60 @@
                     Valid: {{ company.valid_lines }} | 
                     Errors: {{ company.invalid_lines }} | 
                     <span class="percentage">
-                        Min: {{ company.percent_min }}%  (missing: {{ company.missing_minimum }}), 
-                        Rec: {{ company.percent_rec }}% (missing: {{ company.missing_recommended }}), 
-                        Full: {{ company.percent_full }}% (missing: {{ company.missing_full }})
+                        Min: {{ company.percent_min }}%, 
+                        Rec: {{ company.percent_rec }}%, 
+                        Full: {{ company.percent_full }}%
                     </span>
+                    <button id="exportSummaryBtn">Export Summary CSV</button>
+
+                    <script>
+                        document.getElementById("exportSummaryBtn").addEventListener("click", function() {
+
+                            // create Fund JSON
+                            let companyJson = {{ company | tojson | safe }};
+            
+                            const company = companyJson
+            
+                            const data = [];
+            
+                            function addRows(status, items, mapping) {
+                                items.forEach(item => {
+                                    data.push({
+                                        "Status": status,
+                                        "Compound ID": item.compound_id,
+                                        "Value": item.raw_value || "",
+                                        "Error Notes": item.error_notes || "",
+                                        "Recommended level": item.requirement_level || "",
+                                        "Reason": item.reason || ""
+                                    });
+                                });
+                            }
+            
+                            addRows("Valid Lines", company.correct_lines, ["compound_id", "raw_value","requirement_level"]);
+                            addRows("Lines with value errors", company.error_lines, ["compound_id", "raw_value", "error_notes","requirement_level"]);
+                            addRows("Unknown compound_id", company.unknown_lines, ["compound_id", "raw_value", "error_notes"]);
+                            addRows("Strongly recommended, but marked as not_applicable or not_available", company.recommended_but_missing_lines, ["compound_id", "requirement_level", "reason"]);
+                            addRows("Metrics which are missing from the file", company.missing_metrics, ["compound_id", "requirement_level", "reason"]);
+                            addRows("Other metrics marked 'not_applicable' or 'not_provided'", company.blank_lines, ["compound_id", "requirement_level", "reason"]);
+            
+                            // Convert to CSV format
+                            const csvContent = "data:text/csv;charset=utf-8," 
+                                + ["Status,Compound ID,Value,Error Notes,Recommended level,Reason"]
+                                .concat(data.map(row => 
+                                    [row.Status, row["Compound ID"], row.Value, row["Error Notes"], row["Recommended level"], row.Reason]
+                                    .map(field => `"${field}"`).join(",")
+                                )).join("\n");
+            
+                            // Create a downloadable link
+                            const encodedUri = encodeURI(csvContent);
+                            const link = document.createElement("a");
+                            link.setAttribute("href", encodedUri);
+                            link.setAttribute("download", "InvestEuropeMRF - Validator Export.csv");
+                            document.body.appendChild(link);
+                            link.click();
+                            document.body.removeChild(link);
+                        });
+                    </script>
                 </summary>
                 <div>
                     <h3>Imported Correctly</h3>
@@ -235,7 +286,29 @@
                         </tbody>
                     </table>
 
-                    <h3>Missing Metrics</h3>
+                    <h3>Strongly recommended metrics marked 'not_applicable' or 'not_available'</h3>
+                    <p>While data is still transferable without these, it may lack essential context.</p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Compound ID</th>
+                                <th>Requirement Level</th>
+                                <th>Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for metric in company.recommended_but_missing_lines %}
+                                <tr>
+                                    <td>{{ metric.compound_id }}</td>
+                                    <td>{{ metric.requirement_level }}</td>
+                                    <td>{{ metric.reason }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    <h3>Metrics which are missing from the file</h3>
+                    <p>These must be either provided or marked as not_applicable or not_available</p>
                     <table>
                         <thead>
                             <tr>
@@ -246,6 +319,27 @@
                         </thead>
                         <tbody>
                             {% for metric in company.missing_metrics %}
+                                <tr>
+                                    <td>{{ metric.compound_id }}</td>
+                                    <td>{{ metric.requirement_level }}</td>
+                                    <td>{{ metric.reason }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
+                    <h3>Other metrics marked 'not_applicable' or 'not_provided'</h3>
+                    <p>There are no technical errors with these lines, this is just for clarity</p>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Compound ID</th>
+                                <th>Recommended?</th>
+                                <th>Reason</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for metric in company.blank_lines %}
                                 <tr>
                                     <td>{{ metric.compound_id }}</td>
                                     <td>{{ metric.requirement_level }}</td>
