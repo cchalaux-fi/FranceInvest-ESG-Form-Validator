@@ -1,10 +1,14 @@
-import csv
 import os
+import sys
+
+import csv
 import uuid
 from cerberus import Validator
 from flask import Flask, request, render_template, jsonify, send_file, after_this_request
 import openpyxl
 from collections import defaultdict
+import pandas as pd
+
 
 from validation_mappings.interdependencies import INTERDEPENDENCIES
 from validation_mappings.minimum_recommended import MINIMUM_METRICS, RECOMMENDED_METRICS, FULL_METRICS, OPTIONAL_METRICS, ALL_METRICS
@@ -15,6 +19,10 @@ from validation_mappings.options import OPTIONS
 from validation_mappings.options_fund import OPTIONS_FUND
 from validation_mappings.options_gp import OPTIONS_GP
 
+VALID_CERBERUS_KEYS = {
+    "type", "min", "max", "allowed", "required",
+    "nullable", "regex", "schema", "maxlength", "minlength"
+}
 
 app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'uploads'
@@ -28,16 +36,21 @@ def index():
 
 def is_float(value: str):
     try:
-        float(value)
+        float(value.replace(",", "."))
         return True
     except ValueError:
         return False
+    
+def extract_cerberus_rules(rules: dict) -> dict:
+    return {k: v for k, v in rules.items() if k in VALID_CERBERUS_KEYS}
 
 def get_typed_value(schema: dict, value: str, compound_id: str):
     if schema.get(compound_id, {}).get("type") == "integer" and value.isnumeric():
         value = int(value)
     elif schema.get(compound_id, {}).get("type") == "float" and is_float(value):
-        value = float(value)
+        value = float(value.replace(",", "."))
+    elif schema.get(compound_id, {}).get("type") == "list":
+        value = [item.strip() for item in value.split(";") if item.strip()]
     else:
         value = str(value)
     return value
@@ -82,8 +95,66 @@ def read_and_organize_csv(csv_path: str, company_id: str):
 
     return {company_id: company_data}
 
-### PORTCO VALIDATION LOGIC ###
+def read_all_companies_from_xlsx(xlsx_path: str):
+    """
+    Reads an Excel file with multiple rows for multiple companies and organizes
+    the data into a dictionary grouped by COMPANY_NAME.
 
+    Args:
+        xlsx_path (str): Path to the Excel (.xlsx) file.
+
+    Returns:
+        dict: A dictionary where each key is a company name and the value is
+              another dict with 'metrics', 'status', and 'currency'.
+    """
+    expected_columns = [
+        "COMPANY_NAME", "HOLDING_NAME", "WEBSITE", "BUSINESS_ID", "BUSINESS_ID_FORMAT",
+        "REPORTING_DATE", "INDICATOR_ID", "INDICATOR_NAME", "INDICATOR_TYPE",
+        "UNIT", "VALUE", "NOT_APPLICABLE", "NOT_AVAILABLE", "COMMENT"
+    ]
+
+    try:
+        df = pd.read_excel(xlsx_path, sheet_name="DATA")
+    except Exception as e:
+        raise ValueError(f"Error reading Excel file: {e}")
+
+    # Check that all expected columns are present
+    if not all(col in df.columns for col in expected_columns):
+        missing = [col for col in expected_columns if col not in df.columns]
+        raise ValueError(f"Missing columns in Excel file: {missing}")
+
+    all_companies_data = {}
+
+    # Group the DataFrame by COMPANY_NAME
+    grouped = df.groupby("COMPANY_NAME")
+
+    for company_name, group_df in grouped:
+        company_data = {
+            "metrics": {},
+            "status": {},
+            "currency": ""  # Placeholder if needed later
+        }
+
+        for _, row in group_df.iterrows():
+            indicator_id = str(row["INDICATOR_ID"]).strip()
+            value = str(row["VALUE"]).strip()
+            status = ""
+            if str(row.get("NOT_APPLICABLE")).strip().lower() == "yes":
+                status = "not_applicable"
+            elif str(row.get("NOT_AVAILABLE")).strip().lower() == "yes":
+                status = "not_available"
+            else:
+                status = "provided"
+
+            company_data["metrics"][indicator_id] = value
+            company_data["status"][indicator_id] = status
+
+        all_companies_data[company_name] = company_data
+
+    return all_companies_data
+
+
+### PORTCO VALIDATION LOGIC ###
 def validate_metrics_by_company(company_data: dict, schema: dict):
     """
     Validates the data for a single portfolio company based on the provided schema.
@@ -125,9 +196,12 @@ def validate_metrics_by_company(company_data: dict, schema: dict):
             
             missing_metrics.append({
                 "compound_id": compound_id,
+                "label": schema[compound_id].get("label", ""),
                 "requirement_level": level,
                 "reason": "Not in import file at all",
             })
+            continue  # Skip schema validation for these metrics
+
         else:
             raw_value = company_metrics[compound_id]
             status = company_statuses.get(compound_id, "")
@@ -140,86 +214,44 @@ def validate_metrics_by_company(company_data: dict, schema: dict):
                     else "Marked as not available in import file"
                 )
                 level = (
-                    "Minimum" if compound_id in MINIMUM_METRICS
-                    else "Recommended" if compound_id in RECOMMENDED_METRICS
-                    else "Full" if compound_id in FULL_METRICS
+                    "Full" if compound_id in FULL_METRICS
                     else "Value not required"
                 )
-                
-                if raw_fte_value := company_metrics["total_ftes_end_of_report_year"]:
-                    total_fte_number = get_typed_value(schema=SCHEMA_PORTCO, value=raw_fte_value, compound_id="total_ftes_end_of_report_year")
-
-                    if level == "Minimum":
-                        recommended_but_missing_lines.append({
-                            "compound_id": compound_id,
-                            "requirement_level": level,
-                            "reason": "Status is 'not_applicable' or 'not_available', but this is a 'minimum' metric.",
-                        })
-                    elif level == "Recommended":
-                        if total_fte_number >= 15:
-                            recommended_but_missing_lines.append({
+                blank_lines.append({
                                 "compound_id": compound_id,
-                                "requirement_level": level,
-                                "reason": "Status is 'not_applicable' or 'not_available', but this is a 'recommended' metric for companies with FTE higher than 15.",
-                            })
-                        else:
-                            blank_lines.append({
-                                "compound_id": compound_id,
+                                "label": schema[compound_id].get("label", ""),
                                 "requirement_level": level,
                                 "reason": reason,
                             })
-                    elif level == "Full":
-                        if total_fte_number >= 250:
-                            recommended_but_missing_lines.append({
-                                "compound_id": compound_id,
-                                "requirement_level": level,
-                                "reason": "Status is 'not_applicable' or 'not_available', but all metrics are strongly recommended for companies with FTE higher than 250.",
-                            })
-                        else:
-                            blank_lines.append({
-                                "compound_id": compound_id,
-                                "requirement_level": level,
-                                "reason": reason,
-                            })
-                else:
-                    if level == "Minimum":
-                        recommended_but_missing_lines.append({
-                            "compound_id": compound_id,
-                            "requirement_level": level,
-                            "reason": "Status is 'not_applicable' or 'not_available', but this is a 'minimum' metric.",
-                        })
-                    else:
-                        recommended_but_missing_lines.append({
-                            "compound_id": compound_id,
-                            "requirement_level": level,
-                            "reason": "Status is 'not_applicable' or 'not_available'. Unknown level of requirement for this company since total_ftes_end_of_report_year is not provided.",
-                        })
                 continue  # Skip schema validation for these metrics
 
             # Handle blank values
-            if raw_value == "" and status == "provided":
+            if (raw_value is None or str(raw_value).strip() in ["", "nan", "NaN"]) and status == "provided":
                 error_lines.append({
                     "compound_id": compound_id,
-                    "raw_value": raw_value,
+                    "label": schema[compound_id].get("label", ""),
+                    "raw_value": "",
                     "error_notes": "Value is blank but marked as 'provided'.",
                 })
             elif status == "provided":
                 # Validate value if not blank or excluded
                 typed_value = get_typed_value(schema=SCHEMA_PORTCO, value=raw_value, compound_id=compound_id)
-                interpreted_value = get_interpreted_value_portco_with_units(value=raw_value, compound_id=compound_id, currency_unit=company_metrics["currency"])
+                interpreted_value = get_interpreted_value_portco_with_units(value=raw_value, compound_id=compound_id)
 
-                validator = Validator({compound_id: schema.get(compound_id, {})})
+                rules = schema.get(compound_id, {})
+                cerberus_rules = extract_cerberus_rules(rules)
+
+                validator = Validator({compound_id: cerberus_rules})
                 validation_data = {compound_id: typed_value}
                 level = (
-                    "Minimum" if compound_id in MINIMUM_METRICS
-                    else "Recommended" if compound_id in RECOMMENDED_METRICS
-                    else "Full" if compound_id in FULL_METRICS
+                    "Full" if compound_id in FULL_METRICS
                     else "Value not required"
                 )
 
                 if validator.validate(validation_data):
                     valid_lines.append({
                         "compound_id": compound_id,
+                        "label": schema[compound_id].get("label", ""),
                         "raw_value": typed_value,
                         "interpreted_value": interpreted_value,
                         "requirement_level": level,
@@ -227,6 +259,7 @@ def validate_metrics_by_company(company_data: dict, schema: dict):
                 else:
                     error_lines.append({
                         "compound_id": compound_id,
+                        "label": schema[compound_id].get("label", ""),
                         "raw_value": raw_value,
                         "error_notes": str(validator.errors),
                         "requirement_level": level,
@@ -235,226 +268,19 @@ def validate_metrics_by_company(company_data: dict, schema: dict):
             else: 
                 error_lines.append({
                     "compound_id": compound_id,
+                    "label": schema[compound_id].get("label", ""),
                     "raw_value": raw_value,
                     "error_notes": f"Unknown value in 'STATUS' column: {status}.",
                     "requirement_level": level,
                 })
                    
      # Special relationships validation - dependencies and conditionals
-    special_relations = [
-        {
-            "condition_id": "violating_ungp_oecd",
-            "condition_value": "yes",
-            "dependent_ids": ["type_of_violations_ungc_oecd_guidelines"]
-        },
-        {
-            "condition_id": "eu_taxonomy_assessment",
-            "condition_value": "yes",
-            "dependent_ids": [
-                "percentage_turnover_eu_taxonomy",
-                "percentage_capex_eu_taxonomy",
-                "percentage_opex_eu_taxonomy"
-            ]
-        },
-        {
-            "condition_id": "tobacco_activities",
-            "condition_value": "yes",
-            "dependent_ids": ["percentage_turnover_tobacco_activities"]
-        },
-        {
-            "condition_id": "hard_coal_and_lignite_activities",
-            "condition_value": "yes",
-            "dependent_ids": ["percentage_turnover_hard_coal_and_lignite_activities"]
-        },
-        {
-            "condition_id": "oil_fuels_activities",
-            "condition_value": "yes",
-            "dependent_ids": ["percentage_turnover_oil_fuels_activities"]
-        },
-        {
-            "condition_id": "gaseous_fuels_activities",
-            "condition_value": "yes",
-            "dependent_ids": ["percentage_turnover_gaseous_fuels_activities"]
-        },
-        {
-            "condition_id": "high_ghg_intensity_electricity_generation",
-            "condition_value": "yes",
-            "dependent_ids": ["percentage_turnover_high_ghg_intensity_electricity_generation"]
-        },
-        {
-            "condition_id": "ems_implemented",
-            "condition_value": "yes_other_ems_certification",
-            "dependent_ids": ["other_ems_certification"]
-        },
-        {
-            "condition_id": "listed",
-            "condition_value": "yes",
-            "dependent_ids": ["listed_ticker"]
-        },
-        {
-            "condition_id": "occurrence_of_esg_incidents",
-            "condition_value": "yes",
-            "dependent_ids": ["number_of_esg_incidents"]
-        },
-        {
-            "condition_id": "dedicated_sustainability_staff",
-            "condition_value": "yes",
-            "dependent_ids": [
-                "sustainability_staff_ceo",
-                "sustainability_staff_cso",
-                "sustainability_staff_cfo",
-                "sustainability_staff_board",
-                "sustainability_staff_management",
-                "sustainability_staff_none_of_above"
-            ]
-        },
-        {
-            "condition_ids": [
-                "number_of_ftes_end_of_report_year_female",
-                "number_of_ftes_end_of_report_year_non_binary",
-                "number_of_ftes_end_of_report_year_non_disclosed",
-                "number_of_ftes_end_of_report_year_male"
-            ],
-            "total_field": "total_ftes_end_of_report_year"
-        },
-        {
-            "condition_ids": [
-                "number_of_csuite_female",
-                "number_of_csuite_non_binary",
-                "number_of_csuite_non_disclosed",
-                "number_of_csuite_male"
-            ],
-            "total_field": "total_csuite_employees"
-        },
-        {
-            "condition_ids": [
-                "number_of_founders_still_employed_female",
-                "number_of_founders_still_employed_non_binary",
-                "number_of_founders_still_employed_non_disclosed",
-                "number_of_founders_still_employed_male"
-            ],
-            "total_field": "total_founders_still_employed"
-        },
-        {
-            "condition_ids": [
-                "number_of_board_members_female",
-                "number_of_board_members_non_binary",
-                "number_of_board_members_non_disclosed",
-                "number_of_board_members_male",
-                "number_of_board_members_underrepresented_groups",
-                "number_of_independent_board_members"
-            ],
-            "total_field": "total_number_of_board_members"
-        },
-        {
-            "condition_ids": [
-                "energy_consumption_renewable"
-            ],
-            "total_field": "total_energy_consumption"
-        }
-    ]
+    special_relations = []
 
     minimum = MINIMUM_METRICS[:]
     recommended = RECOMMENDED_METRICS[:]
     full = FULL_METRICS[:]
     
-    for relation in special_relations:
-        
-        # Checks to make sure the total is always there for a metric that is a subset of that total (e.g., female FTE requires total FTE)
-        if "condition_ids" in relation:
-            # Check if any one of the fields has a value
-            if any(company_metrics.get(condition_id) for condition_id in relation["condition_ids"]):
-                total_field = relation["total_field"]
-                # Ensure the total field is not marked as not_applicable or not_available
-                total_status = company_statuses.get(total_field, "")
-                
-                if total_field not in company_metrics:
-                    #Replace line in missing metrics with more detail
-                    missing_metrics = [line for line in missing_metrics if line["compound_id"] != total_field]
-                    missing_metrics.append({
-                        "compound_id": total_field,
-                        "requirement_level": f"Strongly recommended because at least one value is provided for {', '.join(relation['condition_ids'])}",
-                        "reason": "Not in import file at all",
-                    })
-                    blank_lines = [line for line in blank_lines if line["compound_id"] != total_field]
-                    
-                elif company_metrics[total_field] == "" and total_status not in ["not_applicable", "not_available"]:
-                    #Replace line in missing metrics with more detail
-                    missing_metrics = [line for line in missing_metrics if line["compound_id"] != total_field]
-                    missing_metrics.append({
-                        "compound_id": total_field,
-                        "requirement_level": f"Strongly recommended because at least one value is provided for {', '.join(relation['condition_ids'])}",
-                        "reason": "Value is blank",
-                    })
-                    valid_lines = [line for line in valid_lines if line["compound_id"] != total_field]
-                    blank_lines = [line for line in blank_lines if line["compound_id"] != total_field]
-
-                elif total_status in ["not_applicable", "not_available"]:
-                    #Replace line in recommended_but_missing_lines metrics with more detail
-                    recommended_but_missing_lines = [line for line in recommended_but_missing_lines if line["compound_id"] != total_field]
-                    recommended_but_missing_lines.append({
-                        "compound_id": total_field,
-                        "requirement_level": f"Strongly recommended because at least one value is provided for {', '.join(relation['condition_ids'])}",
-                        "reason": "Marked as not_applicable or not_available"
-                    })
-                    blank_lines = [line for line in blank_lines if line["compound_id"] != total_field]
-                    
-                
-                    
-        # Checks dependencies, e.g., percentage_turnover_tobacco_activities is required if tobacco_activities = 'yes'
-        else:  
-            condition_id = relation["condition_id"]
-            condition_value = relation["condition_value"]
-            dependent_ids = relation["dependent_ids"]
-
-            if company_metrics.get(condition_id) == condition_value:
-                for dependent_id in dependent_ids:
-                    if dependent_id not in company_metrics:
-                        #Replace line in missing metrics with more detail
-                        missing_metrics = [line for line in missing_metrics if line["compound_id"] != dependent_id]
-                        missing_metrics.append({
-                            "compound_id": dependent_id,
-                            "requirement_level": f"Strongly recommended because '{condition_id}' is '{condition_value}'",
-                            "reason": "Not in import file at all",
-                        })
-                        blank_lines = [line for line in blank_lines if line["compound_id"] != dependent_id]
-                        
-                    elif company_metrics[dependent_id] == "" and company_statuses.get(dependent_id, "") not in ["not_applicable", "not_available"]:
-                        #Replace line in missing metrics with more detail
-                        missing_metrics = [line for line in missing_metrics if line["compound_id"] != dependent_id]
-                        missing_metrics.append({
-                            "compound_id": dependent_id,
-                            "requirement_level": f"Strongly recommended because '{condition_id}' is '{condition_value}'",
-                            "reason": "Value is blank",
-                        })
-                        valid_lines = [line for line in valid_lines if line["compound_id"] != dependent_id]
-                        blank_lines = [line for line in blank_lines if line["compound_id"] != dependent_id]
-                        
-                    elif company_statuses.get(dependent_id, "") in ["not_applicable", "not_available"]:
-                        #Replace line in recommended_but_missing_lines metrics with more detail
-                        recommended_but_missing_lines = [line for line in recommended_but_missing_lines if line["compound_id"] != dependent_id]
-                        recommended_but_missing_lines.append({
-                            "compound_id": dependent_id,
-                            "requirement_level": f"Strongly recommended because '{condition_id}' is '{condition_value}'",
-                            "reason": "Marked as not_applicable or not_available",
-                        })
-                        blank_lines = [line for line in blank_lines if line["compound_id"] != dependent_id]
-                        
-                    else:
-                        #Replace line in valid_lines metrics with correct requirement
-                        
-                        obj = next((x for x in valid_lines if x["compound_id"] == dependent_id), None)
-                        if obj:
-                            obj["requirement_level"] = f"Strongly recommended because '{condition_id}' is '{condition_value}'",
-                    
-                        
-                    if condition_id in minimum:
-                        minimum.append(dependent_id)
-                    if condition_id in recommended:
-                        recommended.append(dependent_id)
-                    if condition_id in full:
-                        full.append(dependent_id)
-
 
     # Handle unknown compound IDs
     for compound_id in company_metrics.keys():
@@ -493,9 +319,11 @@ def validate_metrics_by_company(company_data: dict, schema: dict):
     # Return the company summary
     #TO DO: Update these counts, and update the return for the new groups of lines
     return {
-        "company_name": company_metrics.get("company_name", "Unknown Company"),
+        "company_name": company_metrics.get("FI.GEN.01.00", "Unknown Company"),
         "valid_lines": len(valid_lines),
         "invalid_lines": len(error_lines)+ len(missing_metrics),
+        "unknowned_lines" : len(unknown_lines),
+        "blank_lines_count": len(blank_lines),
         "percent_min": percentages["minimum"],
         "percent_rec": percentages["recommended"],
         "percent_full": percentages["full"],
@@ -518,25 +346,36 @@ def get_interpreted_value_portco(value: str, compound_id: str):
     :param value: The value to interpret.
     :return: Interpreted value if found, else returns the value unchanged.
     """
+    separator = "; "
     # Check if compound_id exists in SCHEMA_PORTCO
     if compound_id in SCHEMA_PORTCO:
         schema_entry = SCHEMA_PORTCO[compound_id]
-        allowed_values = schema_entry.get("allowed")
+        allowed_values = (
+            schema_entry.get("allowed") or
+            schema_entry.get("schema", {}).get("allowed")
+        )
 
         # If allowed values exist and are linked to a key in OPTIONS
         if allowed_values:
             # Find the key in OPTIONS by checking 'allowed' values
             for options_key, options_dict in OPTIONS.items():
                 if set(allowed_values).issubset(options_dict.keys()):
-                    # Use the value to get the interpreted value
-                    interpreted_value = options_dict.get(value)
-                    if interpreted_value:
-                        return interpreted_value
+                    # Determine if we are dealing with a list or a single value
+                    if schema_entry.get("type") == "list":
+                        # Split raw string into individual compound_ids
+                        values = [v.strip() for v in str(value).split(";") if v.strip()]
+                        interpreted_values = [options_dict.get(v, v) for v in values]
+                        return separator.join(interpreted_values)
+                    else:
+                        # Use the value to get the interpreted value
+                        interpreted_value = options_dict.get(value)
+                        if interpreted_value:
+                            return interpreted_value
     
     # Fallback: return the value unchanged if no interpretation is found
     return value
 
-def get_interpreted_value_portco_with_units(value: str, compound_id: str, currency_unit: str):
+def get_interpreted_value_portco_with_units(value: str, compound_id: str):
     """
     Interprets the value for a given compound_id and appends the corresponding unit if applicable.
 
@@ -549,9 +388,9 @@ def get_interpreted_value_portco_with_units(value: str, compound_id: str, curren
     # Add the unit if the compound ID is in the COMPOUND_ID_UNITS mapping
     if compound_id in COMPOUND_ID_UNITS:
         unit = COMPOUND_ID_UNITS[compound_id]
-        # Special handling for currency
-        if unit == "currency":
-            return f"{interpreted_value} {currency_unit}"
+        # # Special handling for currency
+        # if unit == "currency":
+        #     return f"{interpreted_value} {currency_unit}"
         return f"{interpreted_value} {unit}"
 
     return interpreted_value
@@ -587,33 +426,29 @@ def upload_files():
     errors = []
 
     for file in files:
-        if not file.filename.lower().endswith('.csv'):
-            errors.append(f"{file.filename}: Invalid file type. Only .csv files are accepted.")
+        if not file.filename.lower().endswith('.xlsx'):
+            errors.append(f"{file.filename}: Invalid file type. Only .xlsx files are accepted.")
             continue
 
-        # Save the uploaded file temporarily for validation
+        # Save the uploaded file temporarily
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], file.filename)
         file.save(file_path)
 
-        # Give each company a UUID so they don't get mixed up or replaced
-        company_id = uuid.uuid4() 
-
         try:
-            # Validate and read the CSV file
-            company_data = read_and_organize_csv(file_path, company_id)
-            all_companies_data.update(company_data)
+            # Read and organize the data for all companies in the Excel file
+            file_data = read_all_companies_from_xlsx(file_path)
+            all_companies_data.update(file_data)
         except ValueError as e:
             errors.append(f"{file.filename}: {str(e)}")
         finally:
-            os.remove(file_path)  # Clean up the file after processing
+            os.remove(file_path)  # Always delete file after processing
 
     if errors:
         return jsonify({"errors": errors}), 400
 
-    # Validate the combined data
+    # Validate all companies’ data
     validation_results = validate_multiple_companies(all_companies_data)
 
-    # Render results as HTML table
     return render_template('validation_results.html', companies=validation_results)
 
 @app.route('/convert_valid_data_to_excel', methods=['POST'])
