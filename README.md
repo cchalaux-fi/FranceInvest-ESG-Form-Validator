@@ -1,6 +1,6 @@
-# InvestEurope VentureESG MRF 2025 Validator
+# France Invest ESG form validator
 
-The InvestEurope VentureESG MRF 2025 Validator is an open-source Python3 program utilising the Cerberus library to validate .csv files according to the machine-readable format of the 2025 Invest Europe framework.
+The France Invest ESG form validator is an open-source Python3 program utilising the Cerberus library to validate .xlsx files according to the machine-readable format of the France Invest framework.
 
 # Installation of web-app
 
@@ -19,7 +19,7 @@ pip3 install cerberus
 ```
 You can now run the project. In the terminal window, type:
 ```
-python3 [file path of your Invest Europe VentureESG Validator.py file]
+python3 [file path of your France Invest ESG Validator.py file]
 ```
 And hit enter.
 
