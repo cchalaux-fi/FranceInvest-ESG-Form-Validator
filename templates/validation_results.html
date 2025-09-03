@@ -124,7 +124,7 @@
     {% if file_error %}
         <div class="error-message">{{ file_error }}</div>
     {% else %}
-        <button id="convertToExcelBtn">Convert to Excel</button>
+        <!-- <button id="convertToExcelBtn">Convert to Excel</button>
 
         <script>
             document.getElementById("convertToExcelBtn").addEventListener("click", function() {
@@ -159,17 +159,19 @@
                 .catch(error => console.error("Error:", error));
             });
             
-        </script>
+        </script> -->
         <h2>Summary</h2>
         {% for company in companies %}
             <details>
                 <summary>
-                    {{ company.company_name }} ({{ company.company_id }}) - 
+                    {{ company.company_name }} - 
                     Valid: {{ company.valid_lines }} | 
                     Errors: {{ company.invalid_lines }} | 
+                    Unknown : {{ company.unknowned_lines }} | 
+                    Not provided / Not available : {{ company.blank_lines_count }} | 
                     <span class="percentage">
-                        Min: {{ company.percent_min }}%, 
-                        Rec: {{ company.percent_rec }}%, 
+                        <!-- Min: {{ company.percent_min }}%, 
+                        Rec: {{ company.percent_rec }}%,  -->
                         Full: {{ company.percent_full }}%
                     </span>
                     <button id="exportSummaryBtn">Export Summary CSV</button>
@@ -216,7 +218,7 @@
                             const encodedUri = encodeURI(csvContent);
                             const link = document.createElement("a");
                             link.setAttribute("href", encodedUri);
-                            link.setAttribute("download", "InvestEuropeMRF - Validator Export.csv");
+                            link.setAttribute("download", "France Invest - Validator Export.csv");
                             document.body.appendChild(link);
                             link.click();
                             document.body.removeChild(link);
@@ -228,7 +230,8 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>Compound ID</th>
+                                <th>Indicator ID</th>
+                                <th>Indicator name</th>
                                 <th>Value (Raw)</th>
                                 <th>Value (Interpreted)</th>
                                
@@ -238,6 +241,7 @@
                             {% for line in company.correct_lines %}
                                 <tr class="valid">
                                     <td>{{ line.compound_id }}</td>
+                                    <td>{{ line.label }}</td>
                                     <td>{{ line.raw_value }}</td>
                                     <td>{{ line.interpreted_value }}</td>
                                     
@@ -250,7 +254,8 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>Compound ID</th>
+                                <th>Indicator ID</th>
+                                <th>Indicator name</th>
                                 <th>Value (Raw)</th>
                                 <th>Error Notes</th>
                             </tr>
@@ -259,6 +264,7 @@
                             {% for line in company.error_lines %}
                                 <tr class="error">
                                     <td>{{ line.compound_id }}</td>
+                                    <td>{{ line.label }}</td>
                                     <td>{{ line.raw_value }}</td>
                                     <td>{{ line.error_notes }}</td>
                                 </tr>
@@ -270,7 +276,7 @@
                     <table>
                         <thead>
                             <tr>
-                                <th>Compound ID</th>
+                                <th>Indicator ID</th>
                                 <th>Value (Raw)</th>
                                 <th>Error Notes</th>
                             </tr>
@@ -286,7 +292,7 @@
                         </tbody>
                     </table>
 
-                    <h3>Strongly recommended metrics marked 'not_applicable' or 'not_available'</h3>
+                    <!-- <h3>Strongly recommended metrics marked 'not_applicable' or 'not_available'</h3>
                     <p>While data is still transferable without these, it may lack essential context.</p>
                     <table>
                         <thead>
@@ -305,14 +311,15 @@
                                 </tr>
                             {% endfor %}
                         </tbody>
-                    </table>
+                    </table> -->
 
                     <h3>Metrics which are missing from the file</h3>
                     <p>These must be either provided or marked as not_applicable or not_available</p>
                     <table>
                         <thead>
                             <tr>
-                                <th>Compound ID</th>
+                                <th>Indicator ID</th>
+                                <th>Indicator name</th>
                                 <th>Requirement Level</th>
                                 <th>Reason</th>
                             </tr>
@@ -321,6 +328,7 @@
                             {% for metric in company.missing_metrics %}
                                 <tr>
                                     <td>{{ metric.compound_id }}</td>
+                                    <td>{{ metric.label }}</td>
                                     <td>{{ metric.requirement_level }}</td>
                                     <td>{{ metric.reason }}</td>
                                 </tr>
@@ -328,12 +336,13 @@
                         </tbody>
                     </table>
 
-                    <h3>Other metrics marked 'not_applicable' or 'not_provided'</h3>
+                    <h3>Metrics marked 'not_applicable' or 'not_provided'</h3>
                     <p>There are no technical errors with these lines, this is just for clarity</p>
                     <table>
                         <thead>
                             <tr>
-                                <th>Compound ID</th>
+                                <th>Indicator ID</th>
+                                <th>Indicator name</th>
                                 <th>Recommended?</th>
                                 <th>Reason</th>
                             </tr>
@@ -342,6 +351,7 @@
                             {% for metric in company.blank_lines %}
                                 <tr>
                                     <td>{{ metric.compound_id }}</td>
+                                    <td>{{ metric.label }}</td>
                                     <td>{{ metric.requirement_level }}</td>
                                     <td>{{ metric.reason }}</td>
                                 </tr>

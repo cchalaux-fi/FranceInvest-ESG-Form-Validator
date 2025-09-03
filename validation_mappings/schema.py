@@ -1,980 +1,387 @@
 from .options import OPTIONS
 
 SCHEMA_PORTCO = {
-
-    #0.1.1
-    #String
-    "company_name": {
-        "type": "string",
-    },
-
-    #0.1.2
-    #String
-    "business_identification_number": {
-        "type": "string",
-    },
-
-    #0.1.2.1
-    #String
-    "business_identification_number_system": {
-        "type": "string",
-         "allowed": list(OPTIONS["business_identification_system"].keys()),
-    },
-
-    #0.1.3
-    #STRING from country_list
-    "country_of_domicile": {
-        "type": "string",
-        "allowed": list(OPTIONS["country_list"].keys()),
-    },
-
-    #0.1.4
-    #STRING from country_list
-    "primary_country_of_operations": {
-        "type": "string",
-        "allowed": list(OPTIONS["country_list"].keys()),
-    },
-
-    #0.1.5
-    #STRING from country_list
-    "other_EU_country_of_operation_1": {
-        "type": "string",
-        "allowed": list(OPTIONS["eu_country_list"].keys()),
-    },
-    
-    #0.1.5.1
-    #STRING from country_list
-    "other_EU_country_of_operation_2": {
-        "type": "string",
-        "allowed": list(OPTIONS["eu_country_list"].keys()),
-    },
-    
-    #0.1.6
-    #STRING from nace_divisions
-    "main_industry_classification": {
-        "type": "string",
-        "allowed": list(OPTIONS["nace_divisions"].keys()),
-    },
-    
-    #0.1.7
-    #Float (positive)
-    "total_ftes_end_of_report_year": {"type": "float", 'min': 0},
-
-    #0.1.8
-    #Float (positive)
-    "total_ftes_end_of_previous_report_year": {"type": "float", 'min': 0},
-
-    #0.1.9
-    #Float (positive)
-    "gross_revenue": {"type": "float", 'min': 0},
-    
-    #0.1.9.1
-    #Float (positive)
-    "gross_revenue_inside_eu": {"type": "float", 'min': 0},
-    
-    #0.1.9.2
-    #Float (positive)
-    "gross_revenue_outside_eu": {"type": "float", 'min': 0},
-    
-    #0.1.10
-    #Float (positive)
-    "annual_balance_sheet_assets_total": {"type": "float", 'min': 0},
-    
-    #0.1.10.1
-    #Float (positive)
-    "annual_balance_sheet_assets_total_inside_eu": {"type": "float", 'min': 0},
-    
-    #0.1.10.2
-    #Float (positive)
-    "annual_balance_sheet_assets_total_outside_eu": {"type": "float", 'min': 0},
-
-    #0.1.11
-    #Float (positive)
-    "turnover": {"type": "float", 'min': 0},
-    
-    #0.1.11.1
-    #Float (positive)
-    "turnover_inside_eu": {"type": "float", 'min': 0},
-    
-    #0.1.11.2
-    #Float (positive)
-    "turnover_outside_eu": {"type": "float", 'min': 0},
-
-    #0.1.12
-    #STRING from iso_currency_code
-    "currency": {
-        "type": "string",
-        "allowed": list(OPTIONS["iso_currency_code"].keys()),
-    },
-
-    #0.1.13
-    #STRING from yes_no
-    "listed": {
-        "type": "string",
-        "allowed": ["yes", "no"],
-    },
-
-    #0.1.13.1
-    #String
-    "listed_ticker": {
-        "type": "string",
-    },
-    
-    #0.2.1.1
-    #STRING from yes_no
-    "code_of_conduct": {
-       "type": "string",
-        "allowed": ["yes", "no"],
-    },
-    
-    #0.2.1.2
-    #STRING from yes_no
-    "overall_sustainability_policy": {
-        "type": "string",
-        "allowed": ["yes", "no"],
-    },
-
-    #0.2.1.3
-    #STRING from yes_no
-    "environmental_policy": {
-       "type": "string",
-        "allowed": ["yes", "no"],
-    },
-    
-    #0.2.1.4
-    #STRING from yes_no
-    "anti_discrimination_and_equal_opportunities_policy": {
-       "type": "string",
-        "allowed": ["yes", "no"],
-    },
-    
-    #0.2.1.5
-    #STRING from yes_no
-    "diversity_inclusion_policy": {
-        "type": "string",
-        "allowed": ["yes", "no"],
-    },
-    
-    #0.2.1.6
-    #STRING from yes_no
-    "salary_remuneration_policy": {
-       "type": "string",
-        "allowed": ["yes", "no"],
-    },
-    
-    #0.2.1.7
-    #STRING from yes_no
-    "health_and_safety_policy": {
-        "type": "string",
-        "allowed": ["yes", "no"],
-    },
-    
-    #0.2.1.8
-    #STRING from yes_no
-    "human_rights_policy": {
-       "type": "string",
-        "allowed": ["yes", "no"],
-    },
-    
-    #0.2.1.9
-    #STRING from yes_no
-    "anti_corruption_bribery_policy": {
-       "type": "string",
-        "allowed": ["yes", "no"],
-    },
-    
-    #0.2.1.10
-    #STRING from yes_no
-    "data_privacy_security_policy": {
-        "type": "string",
-        "allowed": ["yes", "no"],
-    },
-    
-    
-    #0.2.1.11
-    #STRING from yes_no
-    "supply_chain_policy": {
-       "type": "string",
-        "allowed": ["yes", "no"],
-    },
-    
-    #0.2.1.12
-    #STRING from yes_no_expanded
-    "cybersecurity_data_management_policy": {
-        "type": "string",
-        "allowed": list(OPTIONS["yes_no_expanded"].keys()),
-    },
-    
-    #0.2.2
-    #STRING from yes_no
-    "dedicated_sustainability_staff": {
-        "type": "string",
-        "allowed": list(OPTIONS["yes_no_expanded"].keys()),
-    },
-
-    #0.2.2.1
-    #STRING from yes_no
-    "sustainability_staff_ceo": {
-       "type": "string",
-        "allowed": ["yes", "no"],
-    },
-    
-    #0.2.2.2
-    #STRING from yes_no
-    "sustainability_staff_cso": {
-        "type": "string",
-        "allowed": ["yes", "no"],
-    },
-    
-    #0.2.2.3
-    #STRING from yes_no
-    "sustainability_staff_cfo": {
-       "type": "string",
-        "allowed": ["yes", "no"],
-    },
-    
-    #0.2.2.4
-    #STRING from yes_no
-    "sustainability_staff_board": {
-        "type": "string",
-        "allowed": ["yes", "no"],
-    },
-    
-    #0.2.2.5
-    #STRING from yes_no
-    "sustainability_staff_management": {
-       "type": "string",
-        "allowed": ["yes", "no"],
-    },
-    
-    #0.2.2.6
-    #STRING from yes_no
-    "sustainability_staff_none_of_above": {
-        "type": "string",
-        "allowed": ["yes", "no"],
-    },
-    
-    #0.3.1
-    #STRING from yes_no
-    "occurrence_of_esg_incidents": {
-        "type": "string",
-        "allowed": ["yes", "no"],
-    },
-
-    #0.3.1.1
-    #Integer (positive)
-    "number_of_esg_incidents": {"type": "integer", 'min': 0},
-
-    #1.1.1
-    #STRING from yes_no
-    "eu_taxonomy_assessment": {
-        "type": "string",
-        "allowed": ["yes", "no"],
-    },
-
-    #1.1.1.1
-    #Float between 0 and 100
-    "percentage_turnover_eu_taxonomy": {
+    "FI.ENV.12.00": {
+        "label": "Production annuelle d'énergie renouvelable (MWh)",
         "type": "float",
-        "min": 0.0,
-        "max": 100.0,
+        "min": 0,
     },
-
-    #1.1.1.2
-    #Float between 0 and 100
-    "percentage_capex_eu_taxonomy": {
+    "FI.GOV.02.00": {
+        "label": "Nombre de femmes dans les organes non-exécutifs [PAI13 Tab1]",
         "type": "float",
-        "min": 0.0,
-        "max": 100.0,
+        "min": 0,
     },
-
-    #1.1.1.3
-    #Float between 0 and 100
-    "percentage_opex_eu_taxonomy": {
+    "FI.GEN.07.00": {
+        "label": "Nombre de salariés permanents en ETP à la fin de la période de reporting",
         "type": "float",
-        "min": 0.0,
-        "max": 100.0,
+        "min": 0,
     },
-    
-    #1.2.1
-    #STRING from yes_no
-    "tobacco_activities": {
-        "type": "string",
-        "allowed": ["yes", "no"],
-    },
-    
-    #1.2.1.1
-    #Float between 0 and 100
-    "percentage_turnover_tobacco_activities": {
+    "FI.GEN.08.00": {
+        "label": "Nombre de salariés non permanents en ETP à la fin de l'année de reporting",
         "type": "float",
-        "min": 0.0,
-        "max": 100.0,
+        "min": 0,
     },
-
-    #1.2.2
-    #STRING from yes_no
-    "hard_coal_and_lignite_activities": {
-        "type": "string",
-        "allowed": ["yes", "no"],
-    },
-    
-    #1.2.2.1
-    #Float between 0 and 100
-    "percentage_turnover_hard_coal_and_lignite_activities": {
+    "FI.GOV.01.00": {
+        "label": "Nombre de membres dans les organes non-exécutifs [PAI13 Tab1]",
         "type": "float",
-        "min": 0.0,
-        "max": 100.0,
+        "min": 0,
     },
-
-    #1.2.3
-    #STRING from yes_no
-    "oil_fuels_activities": {
-        "type": "string",
-        "allowed": ["yes", "no"],
-    },
-    
-    #1.2.3.1
-    #Float between 0 and 100
-    "percentage_turnover_oil_fuels_activities": {
+    "FI.SOC.03.00": {
+        "label": "Nombre de femmes dans les organes exécutifs",
         "type": "float",
-        "min": 0.0,
-        "max": 100.0,
+        "min": 0,
     },
-
-    #1.2.4
-    #STRING from yes_no
-    "gaseous_fuels_activities": {
-        "type": "string",
-        "allowed": ["yes", "no"],
-    },
-    
-    #1.2.4.1
-    #Float between 0 and 100
-    "percentage_turnover_gaseous_fuels_activities": {
+    "FI.SOC.04.01": {
+        "label": "Index de l'égalité professionnelle entre les femmes et les hommes",
         "type": "float",
-        "min": 0.0,
-        "max": 100.0,
+        "min": 0,
     },
-    
-    #1.2.5
-    #STRING from yes_no
-    "high_ghg_intensity_electricity_generation": {
-        "type": "string",
-        "allowed": ["yes", "no"],
-    },
-    
-    #1.2.5.1
-    #Float between 0 and 100
-    "percentage_turnover_high_ghg_intensity_electricity_generation": {
+    "FI.SOC.02.00": {
+        "label": "Nombre de membres dans les organes exécutifs",
         "type": "float",
-        "min": 0.0,
-        "max": 100.0,
+        "min": 0,
     },
-    
-    #1.3.1
-    #STRING from yes_no
-    "subject_to_csrd_reporting": {
+    "FI.SOC.14.00": {
+        "label": "Part d’employés actionnaires (%)",
+        "type": "float",
+        "min": 0,
+        "max": 100,
+    },
+    "FI.SOC.15.00": {
+        "label": "Part du capital détenu par les employés (%)",
+        "type": "float",
+        "min": 0,
+        "max": 100,
+    },
+    "FI.GEN.09.00": {
+        "label": "Nombre de salariés permanents en ETP à la fin de la période de reporting précédente (N-1)",
+        "type": "float",
+        "min": 0,
+    },
+    "FI.GEN.05.00": {
+        "label": "Chiffre d'affaires consolidé net (M€)",
+        "type": "float",
+        "min": 0,
+    },
+    "FI.ENV.08.00": {
+        "label": "Activités dans un secteur à fort impact climatique [PAI6 Tab1]",
+        "type": "list",
+        "schema": {"type": "string", "allowed": list(OPTIONS["fi_env_08_00"].keys())},
+    },
+    "FI.GOV.06.00": {
+        "label": "Exposition à des armes controversées [PAI14, Tab1]",
         "type": "string",
-        "allowed": ["yes", "no"],
+        "allowed": ["YES", "NO"],
     },
-
-    #2.1.1
-    #STRING from ems_presence_select
-    "ems_implemented": {
+    "FI.SOC.04.00": {
+        "label": "Calcul de l'index d'égalité professionnelle",
         "type": "string",
-        "allowed": list(OPTIONS["ems_presence_select"].keys()),
+        "allowed": list(OPTIONS["fi_soc_04_00"].keys()),
     },
-
-    #2.1.1.1
-    #String
-    "other_ems_certification": {
+    "FI.GOV.03.00": {
+        "label": "Nombre de membres indépendants dans les organes non-exécutifs",
+        "type": "float",
+        "min": 0,
+    },
+    "FI.SOC.16.00": {
+        "label": "Taux de fréquence d'accident du travail (%) [PAI2 Tab3]",
+        "type": "float",
+        "min": 0,
+        "max": 100,
+    },
+    "FI.ENV.10.00": {
+        "label": "Consommation annuelle d'énergie renouvelable (MWh)",
+        "type": "float",
+        "min": 0,
+    },
+    "FI.ENV.09.00": {
+        "label": "Consommation totale d'énergie (MWh)",
+        "type": "float",
+        "min": 0,
+    },
+    "FI.ENV.11.00": {
+        "label": "Production d'énergie totale (MWh)",
+        "type": "float",
+        "min": 0,
+    },
+    "FI.ENV.19.00": {
+        "label": "Évaluation des dépendances en matière de biodiversité",
         "type": "string",
+        "allowed": list(OPTIONS["fi_env_19_00"].keys()),
     },
-
-    #2.2.1
-    #STRING from ghg_scope_list
-    "ghg_scope_measured_calculated": {
+    "FI.ENV.16.00": {
+        "label": "Poids total des déchets radioactifs (t) [PAI9 Tab1]",
+        "type": "float",
+        "min": 0,
+    },
+    "FI.SOC.17.00": {
+        "label": "Nombre de décès résultant d'accidents du travail et de maladies professionnelles",
+        "type": "float",
+        "min": 0,
+    },
+    "FI.SOC.18.00": {
+        "label": "Nombre de jours de travail de salariés perdus pour accident ou maladie [PAI3 Tab3]",
+        "type": "float",
+        "min": 0,
+    },
+    "FI.ENV.17.00": {
+        "label": "Sites situés dans ou à proximité des zones sensibles du point de vue de la biodiversité [PAI7 Tab1]",
         "type": "string",
-        "allowed": list(OPTIONS["ghg_scope_list"].keys()),
+        "allowed": ["YES", "NO"],
     },
-
-    #2.2.2
-    #Float (positive)
-    "total_ghg_emissions": {"type": "float", 'min': 0},
-    
-    #2.2.3
-    #Float (positive)
-    "total_scope_1_emissions":  {"type": "float", 'min': 0},
-
-    #2.2.3.1
-    #STRING from ghg_scope_1_methodology
-    "total_scope_1_emissions_methodology": {
+    "FI.SOC.12.00": {
+        "label": "Mécanisme de partage de la valeur",
+        "type": "list",
+        "schema": {"type": "string", "allowed": list(OPTIONS["fi_soc_12_00"].keys())},
+    },
+    "FI.GEN.03.00": {
+        "label": "Classification des industries NACE",
         "type": "string",
-        "allowed": list(OPTIONS["ghg_scope_1_methodology"].keys()),
+        "allowed": list(OPTIONS["fi_gen_03_00"].keys()),
     },
-
-    #2.2.4
-    #Float (positive)
-    "total_scope_2_emissions":  {"type": "float", 'min': 0},
-
-    #2.2.4.1
-    #STRING from ghg_scope_2_methodology
-    "total_scope_2_emissions_methodology": {
+    "FI.ENV.18.01": {
+        "label": "Evaluations et mesures de réduction des risques et impacts en matière de  biodiversité [PAI7 Tab1]",
         "type": "string",
-        "allowed": list(OPTIONS["ghg_scope_2_methodology"].keys()),
+        "allowed": list(OPTIONS["fi_env_18_01"].keys()),
     },
-
-    #2.2.5
-    #Float (positive)
-    "total_scope_3_emissions":  {"type": "float", 'min': 0},
-
-    #2.2.5.1
-    #STRING from ghg_scope_3_methodology
-    "total_scope_3_emissions_methodology": {
+    "FI.GEN.11.00": {
+        "label": "Domaines couverts par votre politique de durabilité globale",
+        "type": "list",
+        "schema": {"type": "string", "allowed": list(OPTIONS["fi_gen_11_00"].keys())},
+    },
+    "FI.GEN.12.00": {
+        "label": "Responsabilité et supervision en matière de durabilité",
         "type": "string",
-        "allowed": list(OPTIONS["ghg_scope_3_methodology"].keys()),
+        "allowed": ["YES", "NO"],
     },
-
-    #2.2.5.2
-    #Float (positive)
-    "scope_3_emissions_purchased_goods_and_services": {"type": "float", 'min': 0},
-
-    #2.2.5.3
-    #Float (positive)
-    "scope_3_emissions_capital_goods": {"type": "float", 'min': 0},
-
-    #2.2.5.4
-    #Float (positive)
-    "scope_3_emissions_fuel_and_energy_related_not_in_scopes_1_2": {"type": "float", 'min': 0},
-
-    #2.2.5.5
-    #Float (positive)
-    "scope_3_emissions_upstream_transportation_distribution": {"type": "float", 'min': 0},
-
-    #2.2.5.6
-    #Float (positive)
-    "scope_3_emissions_waste_generated_in_operations": {"type": "float", 'min': 0},
-
-    #2.2.5.7
-    #Float (positive)
-    "scope_3_emissions_business_travel": {"type": "float", 'min': 0},
-
-    #2.2.5.8
-    #Float (positive)
-    "scope_3_emissions_employee_commuting": {"type": "float", 'min': 0},
-
-    #2.2.5.9
-    #Float (positive)
-    "scope_3_emissions_upstream_leased_assets": {"type": "float", 'min': 0},
-
-    #2.2.5.10
-    #Float (positive)
-    "scope_3_emissions_downstream_transportation_distribution": {"type": "float", 'min': 0},
-
-    #2.2.5.11
-    #Float (positive)
-    "scope_3_emissions_processing_of_sold_products": {"type": "float", 'min': 0},
-
-    #2.2.5.12
-    #Float (positive)
-    "scope_3_emissions_use_of_sold_products": {"type": "float", 'min': 0},
-
-    #2.2.5.13
-    #Float (positive)
-    "scope_3_emissions_endoflife_treatment_of_sold_products": {"type": "float", 'min': 0},
-
-    #2.2.5.14
-    #Float (positive)
-    "scope_3_emissions_downstream_leased_assets": {"type": "float", 'min': 0},
-
-    #2.2.5.15
-    #Float (positive)
-    "scope_3_emissions_franchises": {"type": "float", 'min': 0},
-    
-    #2.2.5.16
-    #Float (positive)
-    "scope_3_emissions_investments": {"type": "float", 'min': 0},
-
-    #2.3.1
-    #STRING from decarbonisation_strategy
-    "decarbonisation_strategy_set": {
+    "FI.ENV.13.00": {
+        "label": "Activités dans le secteur des combustibles fossiles [PAI4 Tab1]",
         "type": "string",
-        "allowed": list(OPTIONS["decarbonisation_strategy"].keys()),
+        "allowed": ["YES", "NO"],
     },
-
-    #2.3.2
-    #STRING from ghg_reduction_target
-    "ghg_reduction_target_set": {
+    "FI.SOC.09.00": {
+        "label": "Mise en œuvre d'une enquête auprès des salariés",
         "type": "string",
-        "allowed": list(OPTIONS["ghg_reduction_target"].keys()),
+        "allowed": list(OPTIONS["fi_soc_09_00"].keys()),
     },
-
-    #2.3.3
-    #STRING from long_term_net_zero_goal
-    "long_term_net_zero_goal_set": {
+    "FI.SOC.11.00": {
+        "label": "Nombre moyen d'heures de formation (h/salarié)",
+        "type": "float",
+        "min": 0,
+    },
+    "FI.ENV.01.00": {
+        "label": "Thématiques couvertes par la politique environnementale",
+        "type": "list",
+        "schema": {"type": "string", "allowed": list(OPTIONS["fi_env_01_00"].keys())},
+    },
+    "FI.GOV.04.00": {
+        "label": "RSE abordée au sein des organes gouvernance au moins une fois par an",
         "type": "string",
-        "allowed": list(OPTIONS["long_term_net_zero_goal"].keys()),
+        "allowed": ["YES", "NO"],
     },
-
-    #2.4.1
-    #Float (positive)
-    "total_energy_consumption": {"type": "float", 'min': 0},
-
-    #2.4.2
-    #Float (positive)
-    "energy_consumption_renewable": {"type": "float", 'min': 0},
-    
-    #2.5.1
-    #Float (positive)
-    "total_emissions_to_water": {"type": "float", 'min': 0},
-
-    #2.5.2
-    #Float (positive)
-    "quantity_hazardous_radioactive_waste_generated": {"type": "float", 'min': 0},
-    
-    #2.5.3
-    #STRING from yes_no
-    "circular_economy_principles": {
+    "FI.GOV.07.00": {
+        "label": "Évaluation des questions de durabilité dans la chaîne d'approvisionnement",
         "type": "string",
-        "allowed": ["yes", "no"],
+        "allowed": list(OPTIONS["fi_gov_07_00"].keys()),
     },
-
-    #2.6.1
-    #STRING from yes_no
-    "sites_affecting_biodiversity_areas": {
+    "FI.GOV.09.00": {
+        "label": "Charte achats responsables",
         "type": "string",
-        "allowed": ["yes", "no"],
+        "allowed": list(OPTIONS["fi_gov_09_00"].keys()),
     },
-
-    #3.1.1, 3.1.2, 3.1.3, 3.1.4
-    #Float (positive) — note: number of FTEs can be non-integer
-    "number_of_ftes_end_of_report_year_female": {"type": "float", 'min': 0},
-    "number_of_ftes_end_of_report_year_non_binary": {"type": "float", 'min': 0},
-    "number_of_ftes_end_of_report_year_non_disclosed": {"type": "float", 'min': 0},
-    "number_of_ftes_end_of_report_year_male": {"type": "float", 'min': 0},
-
-    #3.1.5, 3.1.6, 3.1.7, 3.1.8, 3.1.9
-    #Integer (positive)
-    "total_csuite_employees": {"type": "integer", 'min': 0},
-    "number_of_csuite_female": {"type": "integer", 'min': 0},
-    "number_of_csuite_non_binary": {"type": "integer", 'min': 0},
-    "number_of_csuite_non_disclosed": {"type": "integer", 'min': 0},
-    "number_of_csuite_male": {"type": "integer", 'min': 0},
-
-    #3.1.10, 3.1.11, 3.1.12, 3.1.13, 3.1.14
-    #Integer (positive)
-    "total_founders_still_employed": {"type": "integer", 'min': 0},
-    "number_of_founders_still_employed_female": {"type": "integer", 'min': 0},
-    "number_of_founders_still_employed_non_binary": {"type": "integer", 'min': 0},
-    "number_of_founders_still_employed_non_disclosed": {"type": "integer", 'min': 0},
-    "number_of_founders_still_employed_male": {"type": "integer", 'min': 0},
-
-    #3.2.1
-    #Float between 0 and 100
-    "unadjusted_gender_pay_gap": {"type": "float", "min": -100.0, "max": 100.0},
-
-    #3.3.1
-    #Float (positive) — note: number of FTEs can be non-integer
-    "number_of_new_hires_inside_eu_fte": {"type": "float", 'min': 0},
-
-    #3.3.2
-    #Float (positive) — note: number of FTEs can be non-integer
-    "number_of_new_hires_outside_eu_fte": {"type": "float", 'min': 0},
-
-    #3.3.3
-    #Float (positive) — note: number of FTEs can be non-integer
-    "number_of_leavers_inside_eu_fte": {"type": "float", 'min': 0},
-
-    #3.3.4
-    #Float (positive) — note: number of FTEs can be non-integer
-    "number_of_leavers_outside_eu_fte": {"type": "float", 'min': 0},
-
-    #3.3.5
-    #Float (positive) — note: number of FTEs can be non-integer
-    "number_of_new_hires_ma_fte": {"type": "float", 'min': 0},
-    
-    #3.3.6
-    #Float (positive) — note: number of FTEs can be non-integer
-    "number_of_leavers_ma_fte": {"type": "float", 'min': 0},
-
-    #3.3.7
-    #Float (positive or negative) — note: number of FTEs can be non-integer
-    "number_of_organic_net_new_hires_fte": {"type": "float"},
-    
-    #3.3.8
-    #Float (positive or negative) — note: number of FTEs can be non-integer
-    "number_of_total_net_new_hires_fte": {"type": "float"},
-    
-    #3.3.9
-    #Float (positive) — note: number of FTEs can be non-integer
-    "turnover_fte": {"type": "float", 'min': 0},
-
-    #3.4.1
-    #STRING from yes_no_expanded
-    "implements_employee_survey_questionnaires": {
+    "FI.ENV.02.01": {
+        "label": "Types d'émissions concernées par la cible de réduction des émissions de GES",
+        "type": "list",
+        "schema": {"type": "string", "allowed": list(OPTIONS["fi_env_02_01"].keys())},
+    },
+    "FI.GEN.04.00": {
+        "label": "Code de l'unité monétaire de l'organisation (3 lettres)",
         "type": "string",
-        "allowed": list(OPTIONS["yes_no_expanded"].keys()),
+        "allowed": list(OPTIONS["fi_gen_04_00"].keys()),
     },
-
-    #3.4.2
-    #Float between 0 and 100
-    "percentage_employees_responding_employee_survey": {"type": "float", "min": 0.0, "max": 100.0},
-
-    #3.4.3
-    #STRING from whistleblower_procedure
-    "implemented_whistleblower_procedure": {
+    "FI.ENV.04.00": {
+        "label": "Volume des émissions de GES du Scope 1 (tCO2eq) [PAI1, 2, 3 Tab 1]*",
+        "type": "float",
+        "min": 0,
+    },
+    "FI.ENV.03.00": {
+        "label": "Calcul des émissions de GES [PAI1,2,3 Tab1]",
+        "type": "list",
+        "schema": {"type": "string", "allowed": list(OPTIONS["fi_env_03_00"].keys())},
+    },
+    "FI.ENV.07.00": {
+        "label": "Volume des émissions de GES du Scope 3 (tCO2eq) [PAI1, 2, 3 Tab1]*",
+        "type": "float",
+        "min": 0,
+    },
+    "FI.GEN.12.01": {
+        "label": "Responsable de la stratégie, de la mise en ouvre et de la supervision des questions de durabilité",
+        "type": "list",
+        "schema": {"type": "string", "allowed": list(OPTIONS["fi_gen_12_01"].keys())},
+    },
+    "FI.GEN.01.00": {"label": "Nom de l'entreprise", "type": "string"},
+    "FI.GEN.15.00": {
+        "label": "Occurrence d'incidents RSE",
+        "type": "list",
+        "schema": {"type": "string", "allowed": list(OPTIONS["fi_gen_15_00"].keys())},
+    },
+    "FI.GEN.06.00": {
+        "label": "Chiffre d'affaires au sein de l'UE (M€)",
+        "type": "float",
+        "min": 0,
+    },
+    "FI.GEN.10.00": {
+        "label": "Nombre de salariés non permanents en ETP à la fin de l'année de reporting précédente (N-1)",
+        "type": "float",
+        "min": 0,
+    },
+    "FI.GEN.16.00": {
+        "label": "Occurrence d'accidents RSE",
         "type": "string",
-        "allowed": list(OPTIONS["whistleblower_procedure"].keys()),
+        "allowed": ["YES", "NO"],
     },
-
-    #3.5.1
-    #Float (positive)
-    "average_hours_training_employees_taken_during_reporting_period": {"type": "float", 'min': 0},
-
-    #3.6.1
-    #Integer (positive)
-    "number_of_workrelated_injuries": {"type": "integer", 'min': 0},
-
-    #3.6.2
-    #Integer (positive)
-    "number_of_workrelated_fatalities": {"type": "integer", 'min': 0},
-
-    #3.6.3
-    #Float (positive)
-    "days_lost_due_to_injury": {"type": "float", 'min': 0},
-
-    #3.7.1
-    #STRING from yes_no_expanded
-    "human_rights_due_diligence_process": {
+    "FI.ENV.02.03": {
+        "label": "Méthode de calcul de la cible de réduction des émissions GES",
         "type": "string",
-        "allowed": list(OPTIONS["yes_no_expanded"].keys()),
+        "allowed": list(OPTIONS["fi_env_02_03"].keys()),
     },
-
-    #4.1.1, 4.1.2, 4.1.3, 4.1.4, 4.1.5
-    #Integer (positive)
-    "total_number_of_board_members": {"type": "integer", 'min': 0},
-    "number_of_board_members_female": {"type": "integer", 'min': 0},
-    "number_of_board_members_non_binary": {"type": "integer", 'min': 0},
-    "number_of_board_members_non_disclosed": {"type": "integer", 'min': 0},
-    "number_of_board_members_male": {"type": "integer", 'min': 0},
-
-    #4.1.6
-    #Integer (positive)
-    "number_of_board_members_underrepresented_groups": {"type": "integer", 'min': 0},
-
-    #4.1.7
-    #Integer (positive)
-    "number_of_independent_board_members": {"type": "integer", 'min': 0},
-
-    #4.2.1
-    #Integer (positive)
-    "number_of_data_breaches": {"type": "integer", 'min': 0},
-    
-    #PAI 1.2
-    #Float (positive)
-    "total_scope_2_emissions_location_based": {"type": "float", 'min': 0},
-    
-    #PAI 1.3
-    #Float (positive)
-    "total_scope_2_emissions_market_based": {"type": "float", 'min': 0},
-    
-    #PAI 1.5
-    #Float (positive)
-    "total_ghg_emissions_location_based": {"type": "float", 'min': 0},
-    
-    #PAI 1.6
-    #Float (positive)
-    "total_ghg_emissions_market_based": {"type": "float", 'min': 0},
-    
-    #PAI 4.1
-    #STRING from yes_no
-    "active_in_fossil_sector": {
+    "FI.SOC.06.00": {
+        "label": "Nombre d'embauches de salariés permanents en équivalent temps plein (ETP) durant la période de reporting, hors cession/acquisition",
+        "type": "float",
+        "min": 0,
+    },
+    "FI.SOC.07.00": {
+        "label": "Nombre de départs de salariés permanents en équivalent temps plein (ETP) durant la période de reporting, hors cession/acquisition",
+        "type": "float",
+        "min": 0,
+    },
+    "FI.ENV.05.00": {
+        "label": "Volume des émissions GES du scope 2 selon une méthode basée sur la localisation (tCO2eq) [PAI1, 2, 3, Tab1]*",
+        "type": "float",
+        "min": 0,
+    },
+    "FI.ENV.06.00": {
+        "label": "Volume des émissions GES du scope 2 selon une méthode basée sur le marché (tCO2eq) [PAI1, 2, 3, Tab1]*",
+        "type": "float",
+        "min": 0,
+    },
+    "FI.SOC.08.00": {
+        "label": "Taux d'absentéisme (%)*",
+        "type": "float",
+        "min": 0,
+        "max": 100,
+    },
+    "FI.ENV.14.00": {
+        "label": "Volume de substances prioritaires rejetées dans l'eau (t) [PAI8 Tab1]*",
+        "type": "float",
+        "min": 0,
+    },
+    "FI.SOC.05.00": {
+        "label": "Écart de rémunération entre les femmes et les hommes (%) [PAI12 Tab1]*",
+        "type": "float",
+        "min": 0,
+    },
+    "FI.ENV.15.00": {
+        "label": "Poids total des déchets dangereux (t) [PAI9 Tab1]*",
+        "type": "float",
+        "min": 0,
+    },
+    "FI.SOC.01.00": {
+        "label": "Nombre de femmes salariées en équivalent temps plein (ETP)*",
+        "type": "float",
+        "min": 0,
+    },
+    "FI.GEN.13.00": {
+        "label": "[FRANCE INVEST TEST] Procédures et mécanismes de contrôle du respect des principes internationaux [PAI11 Tab1]",
         "type": "string",
-        "allowed": ["yes", "no"],
+        "allowed": ["YES", "NO"],
     },
-    
-    #PAI 5.2
-    #Float (positive)
-    "non_renewable_energy_consumption": {"type": "float", 'min': 0},
-    
-    #PAI 5.4
-    #Float (positive)
-    "total_energy_production": {"type": "float", 'min': 0},
-    
-    #PAI 5.5
-    #Float (positive)
-    "non_renewable_energy_production": {"type": "float", 'min': 0},
-    
-    #PAI 5.6
-    #Float (positive)
-    "renewable_energy_production": {"type": "float", 'min': 0},
-    
-    #PAI 6.1
-    #STRING from yes_no
-    "high_impact_climate_section_a_agriculture_forestry_fishing": {
+    "FI.GEN.14.00": {
+        "label": "[FRANCE INVEST TEST] Violations des principes du PMNU ou des principes directeurs de l'OCDE à l'intention des entreprises multinationales [PAI10 Tab1]",
         "type": "string",
-        "allowed": ["yes", "no"],
+        "allowed": list(OPTIONS["fi_gen_14_00"].keys()),
     },
-    
-    #PAI 6.1.1
-    #Float (positive)
-    "high_impact_climate_section_a_agriculture_forestry_fishing_energy_consumption_gwh": {"type": "float", 'min': 0},
-    
-    #PAI 6.1.2
-    #Float (positive)
-    "high_impact_climate_section_a_agriculture_forestry_fishing_gross_revenue": {"type": "float", 'min': 0},
-    
-    #PAI 6.2
-    #STRING from yes_no
-    "high_impact_climate_section_b_mining_quarrying": {
+    "FI.GEN.17.00": {
+        "label": "[FRANCE INVEST TEST] Évaluation de la part d'activités éligibles et alignées à la taxonomie de l'UE",
         "type": "string",
-        "allowed": ["yes", "no"],
+        "allowed": list(OPTIONS["fi_gen_17_00"].keys()),
     },
-    
-    #PAI 6.2.1
-    #Float (positive)
-    "high_impact_climate_section_b_mining_quarrying_energy_consumption_gwh": {"type": "float", 'min': 0},
-    
-    #PAI 6.2.2
-    #Float (positive)
-    "high_impact_climate_section_b_mining_quarrying_gross_revenue": {"type": "float", 'min': 0},
-    
-    #PAI 6.3
-    #STRING from yes_no
-    "high_impact_climate_section_c_manufacturing": {
+    "FI.ENV.02.00": {
+        "label": "[FRANCE INVEST TEST] Cible en matière de réduction des émissions de GES [PAI4 Tab2]",
         "type": "string",
-        "allowed": ["yes", "no"],
+        "allowed": ["YES", "NO"],
     },
-    
-    #PAI 6.3.1
-    #Float (positive)
-    "high_impact_climate_section_c_manufacturing_energy_consumption_gwh": {"type": "float", 'min': 0},
-    
-    #PAI 6.3.2
-    #Float (positive)
-    "high_impact_climate_section_c_manufacturing_gross_revenue": {"type": "float", 'min': 0},
-    
-    #PAI 6.4
-    #STRING from yes_no
-    "high_impact_climate_section_d_electricity_gas_steam_air_conditioning_supply": {
+    "FI.SOC.10.00": {
+        "label": "[FRANCE INVEST TEST] Procédure de lancement d'alertes et de gestion des plaintes [PAI5 Tab3]",
         "type": "string",
-        "allowed": ["yes", "no"],
+        "allowed": list(OPTIONS["fi_soc_10_00"].keys()),
     },
-    
-    #PAI 6.4.1
-    #Float (positive)
-    "high_impact_climate_section_d_electricity_gas_steam_air_conditioning_supply_energy_consumption_gwh": {"type": "float", 'min': 0},
-    
-    #PAI 6.4.2
-    #Float (positive)
-    "high_impact_climate_section_d_electricity_gas_steam_air_conditioning_supply_gross_revenue": {"type": "float", 'min': 0},
-    
-    #PAI 6.5
-    #STRING from yes_no
-    "high_impact_climate_section_e_water_supply_sewerage_waste_management_remediation_activities": {
+    "FI.GOV.08.00": {
+        "label": "[FRANCE INVEST TEST] Sujets intégrés dans le processus d'évaluation des questions de durabilité dans la chaîne d'approvisionnement",
+        "type": "list",
+        "schema": {"type": "string", "allowed": list(OPTIONS["fi_gov_08_00"].keys())},
+    },
+    "FI.ENV.03.01": {
+        "label": "[FRANCE INVEST TEST] Méthodologie suivie pour le bilan carbone",
         "type": "string",
-        "allowed": ["yes", "no"],
+        "allowed": list(OPTIONS["fi_env_03_01"].keys()),
     },
-    
-    #PAI 6.5.1
-    #Float (positive)
-    "high_impact_climate_section_e_water_supply_sewerage_waste_management_remediation_activities_energy_consumption_gwh": {"type": "float", 'min': 0},
-    
-    #PAI 6.5.2
-    #Float (positive)
-    "high_impact_climate_section_e_water_supply_sewerage_waste_management_remediation_activities_gross_revenue": {"type": "float", 'min': 0},
-    
-    #PAI 6.6
-    #STRING from yes_no
-    "high_impact_climate_section_f_construction": {
+    "FI.ENV.02.02": {
+        "label": "[FRANCE INVEST TEST] Horizon de l'objectif de réduction des émissions de GES",
         "type": "string",
-        "allowed": ["yes", "no"],
+        "allowed": list(OPTIONS["fi_env_02_02"].keys()),
     },
-    
-    #PAI 6.6.1
-    #Float (positive)
-    "high_impact_climate_section_f_construction_energy_consumption_gwh": {"type": "float", 'min': 0},
-    
-    #PAI 6.6.2
-    #Float (positive)
-    "high_impact_climate_section_f_construction_gross_revenue": {"type": "float", 'min': 0},
-    
-    #PAI 6.7
-    #STRING from yes_no
-    "high_impact_climate_section_g_wholesale_retail_trade_repair_motor_vehicles_motorcycles": {
+    "FI.GEN.02.00": {
+        "label": "[FRANCE INVEST TEST] Pays d'établissement",
         "type": "string",
-        "allowed": ["yes", "no"],
+        "allowed": list(OPTIONS["fi_gen_02_00"].keys()),
     },
-    
-    #PAI 6.7.1
-    #Float (positive)
-    "high_impact_climate_section_g_wholesale_retail_trade_repair_motor_vehicles_motorcycles_energy_consumption_gwh": {"type": "float", 'min': 0},
-    
-    #PAI 6.7.2
-    #Float (positive)
-    "high_impact_climate_section_g_wholesale_retail_trade_repair_motor_vehicles_motorcycles_gross_revenue": {"type": "float", 'min': 0},
-    
-    #PAI 6.8
-    #STRING from yes_no
-    "high_impact_climate_section_h_transportation_storage": {
+    "FI.SOC.13.00": {
+        "label": "[FRANCE INVEST TEST] Méthode d'attribution d'actions gratuites",
         "type": "string",
-        "allowed": ["yes", "no"],
+        "allowed": list(OPTIONS["fi_soc_13_00"].keys()),
     },
-    
-    #PAI 6.8.1
-    #Float (positive)
-    "high_impact_climate_section_h_transportation_storage_energy_consumption_gwh": {"type": "float", 'min': 0},
-    
-    #PAI 6.8.2
-    #Float (positive)
-    "high_impact_climate_section_h_transportation_storage_gross_revenue": {"type": "float", 'min': 0},
-    
-    #PAI 6.9
-    #STRING from yes_no
-    "high_impact_climate_section_l_real_estate_activities": {
+    "FI.ENV.18.00": {
+        "label": "[FRANCE INVEST TEST] Activités ayant une incidence négative sur des zones clés de biodiversité [PAI7 Tab1]",
         "type": "string",
-        "allowed": ["yes", "no"],
+        "allowed": list(OPTIONS["fi_env_18_00"].keys()),
     },
-    
-    #PAI 6.9.1
-    #Float (positive)
-    "high_impact_climate_section_l_real_estate_activities_energy_consumption_gwh": {"type": "float", 'min': 0},
-    
-    #PAI 6.9.2
-    #Float (positive)
-    "high_impact_climate_section_l_real_estate_activities_gross_revenue": {"type": "float", 'min': 0},
-    
-    #PAI 10.1
-    #STRING from yes_no
-    "violating_ungp_oecd": {
+    "FI.GOV.05.00": {
+        "label": "[FRANCE INVEST TEST] Code de déontologie / Code éthique",
         "type": "string",
-        "allowed": ["yes", "no"],
+        "allowed": ["YES", "NO"],
     },
-    
-    #PAI 10.1.1
-    #STRING from yes_no
-    "type_of_violations_ungc_oecd_guidelines": {
-        "type": "string",
-        "allowed": list(OPTIONS["violations_ungc_oecd_guidelines"].keys()),
-    },
-    
-    #PAI 11.1
-    #STRING from yes_no
-    "has_processes_monitor_ungp_oecd": {
-        "type": "string",
-        "allowed": ["yes", "no"],
-    },
-    
-    #PAI 14.1
-    #STRING from yes_no
-    "involved_in_controversial_weapons": {
-        "type": "string",
-        "allowed": ["yes", "no"],
-    },
-    
 }
 
-# Dictionary mapping compound IDs to their units
 COMPOUND_ID_UNITS = {
-    "percentage_turnover_eu_taxonomy": "%",
-    "percentage_capex_eu_taxonomy": "%",
-    "percentage_opex_eu_taxonomy": "%",
-    "unadjusted_gender_pay_gap": "%",
-    "percentage_employees_responding_employee_survey": "%",
-    "number_of_data_breaches": "breaches",
-    "days_lost_due_to_injury": "days",
-    "number_of_workrelated_fatalities": "fatalities",
-    "total_ftes_end_of_report_year": "FTEs",
-    "total_ftes_end_of_previous_report_year": "FTEs",
-    "number_of_ftes_end_of_report_year_female": "FTEs",
-    "number_of_ftes_end_of_report_year_non_binary": "FTEs",
-    "number_of_ftes_end_of_report_year_non_disclosed": "FTEs",
-    "number_of_ftes_end_of_report_year_male": "FTEs",
-    "number_of_new_hires_inside_eu_fte": "FTEs",
-    "number_of_new_hires_outside_eu_fte": "FTEs",
-    "number_of_leavers_inside_eu_fte": "FTEs",
-    "number_of_leavers_outside_eu_fte": "FTEs",
-    "number_of_new_hires_ma_fte": "FTEs",
-    "number_of_leavers_ma_fte": "FTEs",
-    "number_of_organic_net_new_hires_fte": "FTEs",
-    "number_of_total_net_new_hires_fte": "FTEs",
-    "turnover_fte": "FTEs",
-    "gross_revenue": "currency",
-    "gross_revenue_inside_eu": "currency",
-    "gross_revenue_outside_eu": "currency",
-    "annual_balance_sheet_assets_total": "currency",
-    "annual_balance_sheet_assets_total_inside_eu": "currency",
-    "annual_balance_sheet_assets_total_outside_eu": "currency",
-    "turnover": "currency",
-    "turnover_inside_eu": "currency",
-    "turnover_outside_eu": "currency",
-    "high_impact_climate_section_a_agriculture_forestry_fishing_gross_revenue": "currency",
-    "high_impact_climate_section_b_mining_quarrying_gross_revenue": "currency",
-    "high_impact_climate_section_c_manufacturing_gross_revenue": "currency",
-    "high_impact_climate_section_d_electricity_gas_steam_air_conditioning_supply_gross_revenue": "currency",
-    "high_impact_climate_section_e_water_supply_sewerage_waste_management_remediation_activities_gross_revenue": "currency",
-    "high_impact_climate_section_f_construction_gross_revenue": "currency",
-    "high_impact_climate_section_g_wholesale_retail_trade_repair_motor_vehicles_motorcycles_gross_revenue": "currency",
-    "high_impact_climate_section_h_transportation_storage_gross_revenue": "currency",
-    "high_impact_climate_section_l_real_estate_activities_gross_revenue": "currency",
-    "high_impact_climate_section_a_agriculture_forestry_fishing_energy_consumption_gwh": "GWh",
-    "high_impact_climate_section_b_mining_quarrying_energy_consumption_gwh": "GWh",
-    "high_impact_climate_section_c_manufacturing_energy_consumption_gwh": "GWh",
-    "high_impact_climate_section_d_electricity_gas_steam_air_conditioning_supply_energy_consumption_gwh": "GWh",
-    "high_impact_climate_section_e_water_supply_sewerage_waste_management_remediation_activities_energy_consumption_gwh": "GWh",
-    "high_impact_climate_section_f_construction_energy_consumption_gwh": "GWh",
-    "high_impact_climate_section_g_wholesale_retail_trade_repair_motor_vehicles_motorcycles_energy_consumption_gwh": "GWh",
-    "high_impact_climate_section_h_transportation_storage_energy_consumption_gwh": "GWh",
-    "high_impact_climate_section_l_real_estate_activities_energy_consumption_gwh": "GWh",
-    "average_hours_training_employees_taken_during_reporting_period": "hours",
-    "number_of_esg_incidents": "incidents",
-    "number_of_workrelated_injuries": "injuries",
-    "total_energy_consumption": "kWh",
-    "energy_consumption_renewable": "kWh",
-    "non_renewable_energy_consumption": "kWh",
-    "total_energy_production": "kWh",
-    "non_renewable_energy_production": "kWh",
-    "renewable_energy_production": "kWh",
-    "total_csuite_employees": "people",
-    "number_of_csuite_female": "people",
-    "number_of_csuite_non_binary": "people",
-    "number_of_csuite_non_disclosed": "people",
-    "number_of_csuite_male": "people",
-    "total_founders_still_employed": "people",
-    "number_of_founders_still_employed_female": "people",
-    "number_of_founders_still_employed_non_binary": "people",
-    "number_of_founders_still_employed_non_disclosed": "people",
-    "number_of_founders_still_employed_male": "people",
-    "total_number_of_board_members": "people",
-    "number_of_board_members_female": "people",
-    "number_of_board_members_non_binary": "people",
-    "number_of_board_members_non_disclosed": "people",
-    "number_of_board_members_male": "people",
-    "number_of_board_members_underrepresented_groups": "people",
-    "number_of_independent_board_members": "people",
-    "total_ghg_emissions": "tCO2e",
-    "total_scope_1_emissions": "tCO2e",
-    "total_scope_2_emissions": "tCO2e",
-    "total_scope_3_emissions": "tCO2e",
-    "scope_3_emissions_purchased_goods_and_services": "tCO2e",
-    "scope_3_emissions_capital_goods": "tCO2e",
-    "scope_3_emissions_fuel_and_energy_related_not_in_scopes_1_2": "tCO2e",
-    "scope_3_emissions_upstream_transportation_distribution": "tCO2e",
-    "scope_3_emissions_waste_generated_in_operations": "tCO2e",
-    "scope_3_emissions_business_travel": "tCO2e",
-    "scope_3_emissions_employee_commuting": "tCO2e",
-    "scope_3_emissions_upstream_leased_assets": "tCO2e",
-    "scope_3_emissions_downstream_transportation_distribution": "tCO2e",
-    "scope_3_emissions_processing_of_sold_products": "tCO2e",
-    "scope_3_emissions_use_of_sold_products": "tCO2e",
-    "scope_3_emissions_endoflife_treatment_of_sold_products": "tCO2e",
-    "scope_3_emissions_downstream_leased_assets": "tCO2e",
-    "scope_3_emissions_franchises": "tCO2e",
-    "scope_3_emissions_investments": "tCO2e",
-    "total_scope_2_emissions_location_based": "tCO2e",
-    "total_scope_2_emissions_market_based": "tCO2e",
-    "total_ghg_emissions_location_based": "tCO2e",
-    "total_ghg_emissions_market_based": "tCO2e",
-    "total_emissions_to_water": "tonnes (metric)",
-    "quantity_hazardous_radioactive_waste_generated": "tonnes (metric)",
+    "FI.ENV.12.00": "MWh",
+    "FI.GOV.02.00": "femme(s)",
+    "FI.GEN.07.00": "ETP",
+    "FI.GEN.08.00": "ETP",
+    "FI.GOV.01.00": "membre(s)",
+    "FI.SOC.03.00": "effectif(s)",
+    "FI.SOC.04.01": "/100",
+    "FI.SOC.02.00": "membre(s)",
+    "FI.GEN.09.00": "ETP",
+    "FI.GEN.05.00": "M€",
+    "FI.GOV.03.00": "indépendant(s)",
+    "FI.ENV.10.00": "MWh",
+    "FI.ENV.09.00": "MWh",
+    "FI.ENV.11.00": "mWh",
+    "FI.ENV.16.00": "tonne(s)",
+    "FI.SOC.17.00": "décès",
+    "FI.SOC.18.00": "jours",
+    "FI.SOC.11.00": "h / salarié",
+    "FI.ENV.04.00": "tCO2éq",
+    "FI.ENV.07.00": "tCO2eq",
+    "FI.GEN.06.00": "M€",
+    "FI.GEN.10.00": "ETP",
+    "FI.SOC.06.00": "Embauche(s)",
+    "FI.SOC.07.00": "Départ(s)",
+    "FI.ENV.05.00": "tCO2éq",
+    "FI.ENV.06.00": "tCO2éq",
+    "FI.ENV.14.00": "tonne(s)",
+    "FI.SOC.05.00": "%",
+    "FI.ENV.15.00": "tonne(s)",
+    "FI.SOC.01.00": "ETP",
 }

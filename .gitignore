@@ -1,0 +1,5 @@
+/.venv
+/__pycache__
+/validation_mappings/__pycache__
+pyproject.toml
+poetry.lock
