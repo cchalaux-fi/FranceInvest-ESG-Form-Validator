@@ -15,7 +15,7 @@ pip3 install flask
 ```
 Then run: 
 ```
-pip3 install cerberus
+pip install -r requirements.txt
 ```
 You can now run the project. In the terminal window, type:
 ```
