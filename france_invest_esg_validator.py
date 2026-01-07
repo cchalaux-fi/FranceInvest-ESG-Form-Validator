@@ -108,7 +108,7 @@ def read_all_companies_from_xlsx(xlsx_path: str):
               another dict with 'metrics', 'status', and 'currency'.
     """
     expected_columns = [
-        "COMPANY_NAME", "HOLDING_NAME", "WEBSITE", "BUSINESS_ID", "BUSINESS_ID_FORMAT",
+        "COMPANY_ID", "COMPANY_NAME", "HOLDING_NAME", "WEBSITE", "BUSINESS_ID", "BUSINESS_ID_FORMAT",
         "REPORTING_DATE", "INDICATOR_ID", "INDICATOR_NAME", "INDICATOR_TYPE",
         "UNIT", "VALUE", "NOT_APPLICABLE", "NOT_AVAILABLE", "COMMENT"
     ]
