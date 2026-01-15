@@ -20,10 +20,10 @@ SCHEMA_PORTCO = {
         "allowed": list(OPTIONS["fi_gen_04_00"].keys()),
     },
     "FI.GEN.05.00": {"label": "Revenue", "type": "float", "min": 0},
-    "FI.GEN.18.00": {
+    "FI.GEN.20.00": {
         "label": "Exposure to controversial sectors",
         "type": "list",
-        "schema": {"type": "string", "allowed": list(OPTIONS["fi_gen_18_00"].keys())},
+        "schema": {"type": "string", "allowed": list(OPTIONS["fi_gen_20_00"].keys())},
     },
     "FI.GEN.07.00": {
         "label": "Number of permanent FTE employees at end of reporting year",
