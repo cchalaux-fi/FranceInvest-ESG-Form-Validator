@@ -116,6 +116,17 @@
         .percentage {
             font-size: 0.9em;
         }
+        summary.summary-ok {
+        background-color: #e6f7e6;
+        color: #1b7a1b;
+        border: 1px solid #8fd19e;
+        }
+
+        summary.summary-ko {
+            background-color: #fdeaea;
+            color: #b30000;
+            border: 1px solid #f5a3a3;
+        }   
     </style>
 </head>
 <body>
@@ -163,7 +174,13 @@
         <h2>Summary</h2>
         {% for company in companies %}
             <details>
-                <summary>
+                <summary class="
+                    {% if company.invalid_lines == 0 and company.unknowned_lines == 0 %}
+                        summary-ok
+                    {% else %}
+                        summary-ko
+                    {% endif %}
+                ">
                     {{ company.company_name }} - 
                     Valid: {{ company.valid_lines }} | 
                     Errors: {{ company.invalid_lines }} | 
@@ -198,9 +215,8 @@
                                     });
                                 });
                             }
-            
-                            addRows("Valid Lines", company.correct_lines, ["compound_id", "raw_value","requirement_level"]);
                             addRows("Lines with value errors", company.error_lines, ["compound_id", "raw_value", "error_notes","requirement_level"]);
+                            addRows("Valid Lines", company.correct_lines, ["compound_id", "raw_value","requirement_level"]);
                             addRows("Unknown compound_id", company.unknown_lines, ["compound_id", "raw_value", "error_notes"]);
                             addRows("Strongly recommended, but marked as not_applicable or not_available", company.recommended_but_missing_lines, ["compound_id", "requirement_level", "reason"]);
                             addRows("Metrics which are missing from the file", company.missing_metrics, ["compound_id", "requirement_level", "reason"]);
@@ -226,6 +242,48 @@
                     </script>
                 </summary>
                 <div>
+                    <h3>Lines with Value Errors</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Indicator ID</th>
+                                <th>Indicator name</th>
+                                <th>Value (Raw)</th>
+                                <th>Error Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for line in company.error_lines %}
+                                <tr class="error">
+                                    <td>{{ line.compound_id }}</td>
+                                    <td>{{ line.label }}</td>
+                                    <td>{{ line.raw_value }}</td>
+                                    <td>{{ line.error_notes }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                    
+                    <h3>Unknown Lines</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Indicator ID</th>
+                                <th>Value (Raw)</th>
+                                <th>Error Notes</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for line in company.unknown_lines %}
+                                <tr class="invalid">
+                                    <td>{{ line.compound_id }}</td>
+                                    <td>{{ line.raw_value }}</td>
+                                    <td>{{ line.error_notes }}</td>
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+
                     <h3>Imported Correctly</h3>
                     <table>
                         <thead>
@@ -250,47 +308,9 @@
                         </tbody>
                     </table>
 
-                    <h3>Lines with Value Errors</h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Indicator ID</th>
-                                <th>Indicator name</th>
-                                <th>Value (Raw)</th>
-                                <th>Error Notes</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for line in company.error_lines %}
-                                <tr class="error">
-                                    <td>{{ line.compound_id }}</td>
-                                    <td>{{ line.label }}</td>
-                                    <td>{{ line.raw_value }}</td>
-                                    <td>{{ line.error_notes }}</td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                    
 
-                    <h3>Unknown Lines</h3>
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Indicator ID</th>
-                                <th>Value (Raw)</th>
-                                <th>Error Notes</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for line in company.unknown_lines %}
-                                <tr class="invalid">
-                                    <td>{{ line.compound_id }}</td>
-                                    <td>{{ line.raw_value }}</td>
-                                    <td>{{ line.error_notes }}</td>
-                                </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                   
 
                     <!-- <h3>Strongly recommended metrics marked 'not_applicable' or 'not_available'</h3>
                     <p>While data is still transferable without these, it may lack essential context.</p>

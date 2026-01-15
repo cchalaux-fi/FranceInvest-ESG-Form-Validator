@@ -923,12 +923,12 @@ OPTIONS = {
         "FI.GOV.11.00.c": "Clauses/commitments signed by suppliers",
         "FI.GOV.11.00.d": "None of the above",
     },
-    "fi_gen_18_00": {
-        "FI.GEN.18.00.a": "Gambling",
-        "FI.GEN.18.00.b": "Pornography",
-        "FI.GEN.18.00.c": "Tobacco",
-        "FI.GEN.18.00.d": "Pesticides",
-        "FI.GEN.18.00.e": "Producst linked to deforestation (ex: coffee, cocoa, rubber, palm oil, soy, cattle, wood)",
-        "FI.GEN.18.00.f": "none of the above",
+    "fi_gen_20_00": {
+        "FI.GEN.20.00.a": "Gambling",
+        "FI.GEN.20.00.b": "Pornography",
+        "FI.GEN.20.00.c": "Tobacco",
+        "FI.GEN.20.00.d": "Pesticides",
+        "FI.GEN.20.00.e": "Producst linked to deforestation (ex: coffee, cocoa, rubber, palm oil, soy, cattle, wood)",
+        "FI.GEN.20.00.f": "none of the above",
     },
 }
